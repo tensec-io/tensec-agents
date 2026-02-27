@@ -200,6 +200,7 @@ class SandboxManager:
         repo_name: str,
         default_branch: str = "main",
         clone_token: str = "",
+        user_env_vars: dict[str, str] | None = None,
     ) -> SandboxHandle:
         """
         Create a sandbox specifically for image building.
@@ -209,20 +210,27 @@ class SandboxManager:
         - No CONTROL_PLANE_URL, SANDBOX_AUTH_TOKEN, or LLM secrets
         - Shorter timeout (30 min vs 2 hours)
         - Always uses base_image (builds start from the universal base)
+        - Accepts user_env_vars (e.g. NPM_TOKEN) for private registry auth
         """
         BUILD_TIMEOUT_SECONDS = 1800
 
         start_time = time.time()
         sandbox_id = f"build-{repo_owner}-{repo_name}-{int(time.time() * 1000)}"
 
-        env_vars: dict[str, str] = {
+        # User env vars first, system vars override (same pattern as create_sandbox)
+        env_vars: dict[str, str] = {}
+
+        if user_env_vars:
+            env_vars.update(user_env_vars)
+
+        env_vars.update({
             "PYTHONUNBUFFERED": "1",
             "SANDBOX_ID": sandbox_id,
             "REPO_OWNER": repo_owner,
             "REPO_NAME": repo_name,
             "IMAGE_BUILD_MODE": "true",
             "SESSION_CONFIG": json.dumps({"branch": default_branch}),
-        }
+        })
 
         self._inject_vcs_env_vars(env_vars, clone_token or None)
 
