@@ -210,14 +210,13 @@ class SandboxManager:
         - No CONTROL_PLANE_URL, SANDBOX_AUTH_TOKEN, or LLM secrets
         - Shorter timeout (30 min vs 2 hours)
         - Always uses base_image (builds start from the universal base)
-        - Accepts user_env_vars (e.g. NPM_TOKEN) for private registry auth
         """
         BUILD_TIMEOUT_SECONDS = 1800
 
         start_time = time.time()
         sandbox_id = f"build-{repo_owner}-{repo_name}-{int(time.time() * 1000)}"
 
-        # User env vars first, system vars override (same pattern as create_sandbox)
+        # Prepare environment variables (user vars first, system vars override)
         env_vars: dict[str, str] = {}
 
         if user_env_vars:

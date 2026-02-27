@@ -197,7 +197,7 @@ async def build_repo_image(
         default_branch: Branch to clone and build
         callback_url: URL to POST success result to
         build_id: Build identifier from the control plane
-        user_env_vars: User-defined env vars (e.g. NPM_TOKEN) for private registry auth
+        user_env_vars: User-defined env vars
     """
     from ..sandbox.manager import SandboxManager
 
