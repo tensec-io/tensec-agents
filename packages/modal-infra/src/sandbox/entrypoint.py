@@ -633,6 +633,9 @@ class SandboxSupervisor:
                     delay = min(self.BACKOFF_BASE**code_server_restart_count, self.BACKOFF_MAX)
                     await asyncio.sleep(delay)
                     await self.start_code_server()
+                else:
+                    self.log.warn("code_server.max_restarts", restart_count=code_server_restart_count)
+                    self.code_server_process = None
 
             await asyncio.sleep(1.0)
 
