@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS sandbox (
   spawn_failure_count INTEGER DEFAULT 0,            -- Circuit breaker: consecutive spawn failures
   last_spawn_failure INTEGER,                       -- Timestamp of last spawn failure
   code_server_url TEXT,                             -- Code-server tunnel URL (rotates on wake/restore)
-  code_server_password TEXT,                        -- Code-server password (stable per session)
+  code_server_password TEXT,                        -- Code-server password (rotates on each wake/restore)
   created_at INTEGER NOT NULL
 );
 
