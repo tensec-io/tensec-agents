@@ -101,9 +101,7 @@ class SandboxManager:
         return password
 
     @staticmethod
-    async def _resolve_code_server_tunnel(
-        sandbox: modal.Sandbox, sandbox_id: str
-    ) -> str | None:
+    async def _resolve_code_server_tunnel(sandbox: modal.Sandbox, sandbox_id: str) -> str | None:
         """Resolve the code-server tunnel URL from Modal, returning None on failure."""
         try:
             loop = asyncio.get_event_loop()
