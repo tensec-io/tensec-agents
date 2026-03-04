@@ -23,8 +23,8 @@ SANDBOX_DIR = Path(__file__).parent.parent / "sandbox"
 OPENCODE_VERSION = "latest"
 
 # Cache buster - change this to force Modal image rebuild
-# v39: Install gh CLI for agent-direct GitHub interaction
-CACHE_BUSTER = "v39-gh-cli"
+# v40: Install code-server for browser-based VS Code editing
+CACHE_BUSTER = "v40-code-server"
 
 # Base image with all development tools
 base_image = (
@@ -103,6 +103,11 @@ base_image = (
         # Install @opencode-ai/plugin globally for custom tools
         # This ensures tools can import the plugin without needing to run bun add
         "npm install -g @opencode-ai/plugin@latest zod",
+    )
+    # Install code-server for browser-based VS Code editing
+    .run_commands(
+        "curl -fsSL https://code-server.dev/install.sh | sh",
+        "code-server --version",
     )
     # Install Playwright browsers (Chromium only to save space)
     .run_commands(

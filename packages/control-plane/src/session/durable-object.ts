@@ -415,6 +415,8 @@ export class SessionDO extends DurableObject<Env> {
       resetCircuitBreaker: () => this.repository.resetCircuitBreaker(),
       setLastSpawnError: (error, timestamp) =>
         this.repository.updateSandboxSpawnError(error, timestamp),
+      updateSandboxCodeServer: (url, password) =>
+        this.repository.updateSandboxCodeServer(url, password),
     };
 
     // Broadcaster adapter
@@ -1337,6 +1339,8 @@ export class SessionDO extends DurableObject<Env> {
       reasoningEffort: session?.reasoning_effort ?? undefined,
       isProcessing,
       parentSessionId: session?.parent_session_id ?? null,
+      codeServerUrl: sandbox?.code_server_url ?? null,
+      codeServerPassword: sandbox?.code_server_password ?? null,
     };
   }
 
