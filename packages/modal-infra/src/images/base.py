@@ -23,8 +23,8 @@ SANDBOX_DIR = Path(__file__).parent.parent / "sandbox"
 OPENCODE_VERSION = "latest"
 
 # Cache buster - change this to force Modal image rebuild
-# v40: Install code-server for browser-based VS Code editing
-CACHE_BUSTER = "v40-code-server"
+# v42: fix attachment mime type
+CACHE_BUSTER = "v42-fix-attachment-mime"
 
 # Base image with all development tools
 base_image = (
