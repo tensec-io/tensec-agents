@@ -37,6 +37,7 @@ import {
   StopIcon,
   CopyIcon,
   ErrorIcon,
+  FileIcon,
   PaperclipIcon,
   XIcon,
 } from "@/components/ui/icons";
@@ -1225,6 +1226,19 @@ const EventItem = memo(function EventItem({
             </div>
           </div>
           <pre className="whitespace-pre-wrap text-sm text-foreground">{messageContent}</pre>
+          {event.attachments && event.attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {event.attachments.map((att, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-1.5 bg-muted px-2 py-1 text-xs text-muted-foreground"
+                >
+                  <FileIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="max-w-[160px] truncate">{att.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
