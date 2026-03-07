@@ -25,7 +25,7 @@ import { ActionBar } from "@/components/action-bar";
 import { copyToClipboard, formatModelNameLower } from "@/lib/format";
 import { SHORTCUT_LABELS } from "@/lib/keyboard-shortcuts";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { DEFAULT_MODEL, getDefaultReasoningEffort, type ModelCategory } from "@open-inspect/shared";
+import { DEFAULT_MODEL, getDefaultReasoningEffort, type Attachment, type ModelCategory } from "@open-inspect/shared";
 import { useEnabledModels } from "@/hooks/use-enabled-models";
 import { ReasoningEffortPills } from "@/components/reasoning-effort-pills";
 import type { SandboxEvent } from "@/types/session";
@@ -37,6 +37,8 @@ import {
   StopIcon,
   CopyIcon,
   ErrorIcon,
+  PaperclipIcon,
+  XIcon,
 } from "@/components/ui/icons";
 import { Combobox, type ComboboxGroup } from "@/components/ui/combobox";
 
@@ -234,12 +236,14 @@ function SessionPageContent() {
   );
 
   const [prompt, setPrompt] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
   const [reasoningEffort, setReasoningEffort] = useState<string | undefined>(
     getDefaultReasoningEffort(DEFAULT_MODEL)
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { enabledModels, enabledModelOptions } = useEnabledModels();
@@ -272,11 +276,37 @@ function SessionPageContent() {
     e.preventDefault();
     if (!prompt.trim() || isProcessing) return;
 
-    sendPrompt(prompt, selectedModel, reasoningEffort);
+    sendPrompt(prompt, selectedModel, reasoningEffort, attachments.length > 0 ? attachments : undefined);
     setPrompt("");
+    setAttachments([]);
     // Revalidate sidebar so this session bubbles to the top
     mutate("/api/sessions");
   };
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const type: Attachment["type"] = file.type.startsWith("image/") ? "image" : "file";
+        setAttachments((prev) => [
+          ...prev,
+          { type, name: file.name, mimeType: file.type, content: dataUrl },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+  }, []);
+
+  const removeAttachment = useCallback((index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return;
@@ -314,13 +344,17 @@ function SessionPageContent() {
       currentParticipantId={currentParticipantId}
       messagesEndRef={messagesEndRef}
       prompt={prompt}
+      attachments={attachments}
       isProcessing={isProcessing}
       selectedModel={selectedModel}
       reasoningEffort={reasoningEffort}
       inputRef={inputRef}
+      fileInputRef={fileInputRef}
       handleSubmit={handleSubmit}
       handleInputChange={handleInputChange}
       handleKeyDown={handleKeyDown}
+      handleFileSelect={handleFileSelect}
+      removeAttachment={removeAttachment}
       setSelectedModel={handleModelChange}
       setReasoningEffort={setReasoningEffort}
       stopExecution={stopExecution}
@@ -348,13 +382,17 @@ function SessionContent({
   currentParticipantId,
   messagesEndRef,
   prompt,
+  attachments,
   isProcessing,
   selectedModel,
   reasoningEffort,
   inputRef,
+  fileInputRef,
   handleSubmit,
   handleInputChange,
   handleKeyDown,
+  handleFileSelect,
+  removeAttachment,
   setSelectedModel,
   setReasoningEffort,
   stopExecution,
@@ -378,13 +416,17 @@ function SessionContent({
   currentParticipantId: string | null;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   prompt: string;
+  attachments: Attachment[];
   isProcessing: boolean;
   selectedModel: string;
   reasoningEffort: string | undefined;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleSubmit: (e: React.FormEvent) => void;
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
+  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  removeAttachment: (index: number) => void;
   setSelectedModel: (model: string) => void;
   setReasoningEffort: (value: string | undefined) => void;
   stopExecution: () => void;
@@ -762,6 +804,45 @@ function SessionContent({
 
           {/* Input container */}
           <div className="border border-border bg-input">
+            {/* Attachment previews */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 px-4 pt-3">
+                {attachments.map((att, i) => (
+                  <div
+                    key={i}
+                    className="relative group/att flex items-center gap-1.5 bg-muted px-2 py-1 text-xs text-foreground"
+                  >
+                    {att.type === "image" && att.content && (
+                      <img
+                        src={att.content}
+                        alt={att.name}
+                        className="w-6 h-6 object-cover rounded"
+                      />
+                    )}
+                    <span className="max-w-[120px] truncate">{att.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(i)}
+                      className="p-0.5 text-muted-foreground hover:text-foreground transition"
+                      aria-label={`Remove ${att.name}`}
+                    >
+                      <XIcon className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.txt,.md,.csv,.json,.xml,.yaml,.yml"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
             {/* Text input area with floating send button */}
             <div className="relative">
               <textarea
@@ -778,6 +859,15 @@ function SessionContent({
                 {isProcessing && prompt.trim() && (
                   <span className="text-xs text-amber-600 dark:text-amber-400">Waiting...</span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 text-secondary-foreground hover:text-foreground transition"
+                  title="Attach files"
+                  aria-label="Attach files"
+                >
+                  <PaperclipIcon className="w-5 h-5" />
+                </button>
                 {isProcessing && (
                   <button
                     type="button"

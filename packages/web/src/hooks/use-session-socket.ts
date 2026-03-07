@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { mutate } from "swr";
 import type { Artifact, SandboxEvent } from "@/types/session";
 import type {
+  Attachment,
   ParticipantPresence,
   SandboxEvent as SharedSandboxEvent,
   ServerMessage,
@@ -45,7 +46,7 @@ interface UseSessionSocketReturn {
   isProcessing: boolean;
   hasMoreHistory: boolean;
   loadingHistory: boolean;
-  sendPrompt: (content: string, model?: string, reasoningEffort?: string) => void;
+  sendPrompt: (content: string, model?: string, reasoningEffort?: string, attachments?: Attachment[]) => void;
   stopExecution: () => void;
   sendTyping: () => void;
   reconnect: () => void;
@@ -493,7 +494,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     };
   }, [sessionId, handleMessage, fetchWsToken]);
 
-  const sendPrompt = useCallback((content: string, model?: string, reasoningEffort?: string) => {
+  const sendPrompt = useCallback((content: string, model?: string, reasoningEffort?: string, attachments?: Attachment[]) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       console.error("WebSocket not connected");
       return;
@@ -502,7 +503,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     if (!subscribedRef.current) {
       console.error("Not subscribed yet, waiting...");
       // Retry after a short delay
-      setTimeout(() => sendPrompt(content, model, reasoningEffort), 500);
+      setTimeout(() => sendPrompt(content, model, reasoningEffort, attachments), 500);
       return;
     }
 
@@ -510,6 +511,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
       contentLength: content.length,
       model,
       reasoningEffort,
+      attachmentCount: attachments?.length ?? 0,
     });
 
     // Optimistically set isProcessing for immediate feedback
@@ -526,6 +528,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
         content,
         model, // Include model for per-message model switching
         reasoningEffort,
+        ...(attachments?.length ? { attachments } : {}),
       })
     );
   }, []);

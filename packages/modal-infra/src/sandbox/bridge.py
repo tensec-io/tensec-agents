@@ -587,6 +587,7 @@ class AgentBridge:
         content = cmd.get("content", "")
         model = cmd.get("model")
         reasoning_effort = cmd.get("reasoningEffort")
+        attachments = cmd.get("attachments")
         author_data = cmd.get("author", {})
         start_time = time.time()
         outcome = "success"
@@ -596,6 +597,7 @@ class AgentBridge:
             message_id=message_id,
             model=model,
             reasoning_effort=reasoning_effort,
+            attachments_count=len(attachments) if attachments else 0,
         )
 
         scm_name = author_data.get("scmName")
@@ -614,7 +616,7 @@ class AgentBridge:
             had_error = False
             error_message = None
             async for event in self._stream_opencode_response_sse(
-                message_id, content, model, reasoning_effort
+                message_id, content, model, reasoning_effort, attachments
             ):
                 if event.get("type") == "error":
                     had_error = True
@@ -761,6 +763,7 @@ class AgentBridge:
         model: str | None,
         opencode_message_id: str | None = None,
         reasoning_effort: str | None = None,
+        attachments: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Build request body for OpenCode prompt requests.
 
@@ -771,8 +774,23 @@ class AgentBridge:
                                  When provided, OpenCode uses this as the user message ID,
                                  and assistant responses will have parentID pointing to it.
             reasoning_effort: Optional reasoning effort level (e.g., "high", "max")
+            attachments: Optional list of file attachments with data URL content
         """
-        request_body: dict[str, Any] = {"parts": [{"type": "text", "text": content}]}
+        parts: list[dict[str, Any]] = [{"type": "text", "text": content}]
+
+        if attachments:
+            for att in attachments:
+                mime_type = att.get("mimeType", "application/octet-stream")
+                data_url = att.get("content", "")
+                if data_url:
+                    parts.append({
+                        "type": "file",
+                        "mime": mime_type,
+                        "url": data_url,
+                        "filename": att.get("name", ""),
+                    })
+
+        request_body: dict[str, Any] = {"parts": parts}
 
         if opencode_message_id:
             request_body["messageID"] = opencode_message_id
@@ -863,6 +881,7 @@ class AgentBridge:
         content: str,
         model: str | None = None,
         reasoning_effort: str | None = None,
+        attachments: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
         """Stream response from OpenCode using Server-Sent Events.
 
@@ -883,7 +902,7 @@ class AgentBridge:
 
         opencode_message_id = OpenCodeIdentifier.ascending("message")
         request_body = self._build_prompt_request_body(
-            content, model, opencode_message_id, reasoning_effort
+            content, model, opencode_message_id, reasoning_effort, attachments
         )
 
         sse_url = f"{self.opencode_base_url}/event"
