@@ -210,10 +210,13 @@ describe("createSessionLifecycleHandler", () => {
     expect(repository.createParticipant).toHaveBeenCalledWith({
       id: "participant-1",
       userId: "user-1",
+      scmUserId: null,
       scmLogin: "octocat",
       scmName: "The Octocat",
       scmEmail: "octocat@example.com",
       scmAccessTokenEncrypted: "encrypted-scm-token",
+      scmRefreshTokenEncrypted: null,
+      scmTokenExpiresAt: null,
       role: "owner",
       joinedAt: 1234,
     });

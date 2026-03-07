@@ -17,11 +17,14 @@ interface InitRequest {
   model?: string;
   reasoningEffort?: string;
   userId: string;
+  scmUserId?: string;
   scmLogin?: string;
   scmName?: string;
   scmEmail?: string;
   scmToken?: string | null;
   scmTokenEncrypted?: string | null;
+  scmRefreshTokenEncrypted?: string | null;
+  scmTokenExpiresAt?: number | null;
   parentSessionId?: string | null;
   spawnSource?: SpawnSource;
   spawnDepth?: number;
@@ -124,12 +127,26 @@ export function createSessionLifecycleHandler(
       deps.repository.createParticipant({
         id: participantId,
         userId: body.userId,
+        scmUserId: body.scmUserId ?? null,
         scmLogin: body.scmLogin ?? null,
         scmName: body.scmName ?? null,
         scmEmail: body.scmEmail ?? null,
         scmAccessTokenEncrypted: encryptedToken,
+        scmRefreshTokenEncrypted: body.scmRefreshTokenEncrypted ?? null,
+        scmTokenExpiresAt: body.scmTokenExpiresAt ?? null,
         role: "owner",
         joinedAt: now,
+      });
+
+      deps.getLog().info("participant.created", {
+        participant_id: participantId,
+        user_id: body.userId,
+        scm_user_id: body.scmUserId ?? null,
+        scm_login: body.scmLogin ?? null,
+        scm_name: body.scmName ?? null,
+        scm_email: body.scmEmail ?? null,
+        has_scm_identity: Boolean(body.scmLogin || body.scmEmail),
+        role: "owner",
       });
 
       deps.getLog().info("Triggering sandbox spawn for new session");
