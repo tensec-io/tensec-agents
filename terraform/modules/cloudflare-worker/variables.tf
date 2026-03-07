@@ -131,6 +131,15 @@ variable "compatibility_flags" {
   default     = []
 }
 
+variable "r2_buckets" {
+  description = "List of R2 bucket bindings"
+  type = list(object({
+    binding_name = string
+    bucket_name  = string
+  }))
+  default = []
+}
+
 variable "custom_domain" {
   description = "Custom domain hostname for the worker"
   type        = string

@@ -15,6 +15,7 @@ import {
   DEFAULT_MODEL,
   getDefaultReasoningEffort,
   isValidReasoningEffort,
+  type Attachment,
   type ModelCategory,
 } from "@open-inspect/shared";
 import { useEnabledModels } from "@/hooks/use-enabled-models";
@@ -28,6 +29,8 @@ import {
   BranchIcon,
   ChevronDownIcon,
   SendIcon,
+  PaperclipIcon,
+  XIcon,
 } from "@/components/ui/icons";
 import { Combobox, type ComboboxGroup } from "@/components/ui/combobox";
 
@@ -46,6 +49,7 @@ export default function Home() {
   );
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [prompt, setPrompt] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
@@ -197,6 +201,76 @@ export default function Home() {
     }
   }, [hasHydratedModelPreferences, enabledModels, selectedModel, reasoningEffort]);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragCounterRef = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const processFiles = useCallback((files: FileList | File[]) => {
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const type: Attachment["type"] = file.type.startsWith("image/") ? "image" : "file";
+        setAttachments((prev) => [
+          ...prev,
+          { type, name: file.name, mimeType: file.type, content: dataUrl },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files) return;
+      processFiles(files);
+      e.target.value = "";
+    },
+    [processFiles]
+  );
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        processFiles(files);
+      }
+    },
+    [processFiles]
+  );
+
+  const removeAttachment = useCallback((index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   const handleRepoChange = useCallback(
     (repoFullName: string) => {
       setSelectedRepo(repoFullName);
@@ -249,6 +323,7 @@ export default function Home() {
           content: prompt,
           model: selectedModel,
           reasoningEffort,
+          ...(attachments.length > 0 ? { attachments } : {}),
         }),
       });
 
@@ -283,6 +358,15 @@ export default function Home() {
       setReasoningEffort={setReasoningEffort}
       prompt={prompt}
       handlePromptChange={handlePromptChange}
+      attachments={attachments}
+      fileInputRef={fileInputRef}
+      handleFileSelect={handleFileSelect}
+      removeAttachment={removeAttachment}
+      isDragging={isDragging}
+      handleDragEnter={handleDragEnter}
+      handleDragOver={handleDragOver}
+      handleDragLeave={handleDragLeave}
+      handleDrop={handleDrop}
       creating={creating}
       isCreatingSession={isCreatingSession}
       error={error}
@@ -308,6 +392,15 @@ function HomeContent({
   setReasoningEffort,
   prompt,
   handlePromptChange,
+  attachments,
+  fileInputRef,
+  handleFileSelect,
+  removeAttachment,
+  isDragging,
+  handleDragEnter,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
   creating,
   isCreatingSession,
   error,
@@ -329,6 +422,15 @@ function HomeContent({
   setReasoningEffort: (value: string | undefined) => void;
   prompt: string;
   handlePromptChange: (value: string) => void;
+  attachments: Attachment[];
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  removeAttachment: (index: number) => void;
+  isDragging: boolean;
+  handleDragEnter: (e: React.DragEvent) => void;
+  handleDragOver: (e: React.DragEvent) => void;
+  handleDragLeave: (e: React.DragEvent) => void;
+  handleDrop: (e: React.DragEvent) => void;
   creating: boolean;
   isCreatingSession: boolean;
   error: string;
@@ -388,7 +490,58 @@ function HomeContent({
             <form onSubmit={handleSubmit}>
               {error && <ErrorBanner className="mb-4">{error}</ErrorBanner>}
 
-              <div className="border border-border bg-input">
+              <div
+                className={`relative border bg-input transition-colors ${isDragging ? "border-accent" : "border-border"}`}
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {/* Drag overlay */}
+                {isDragging && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 border-2 border-dashed border-accent">
+                    <span className="text-sm text-muted-foreground">Drop files here</span>
+                  </div>
+                )}
+                {/* Attachment previews */}
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 px-4 pt-3">
+                    {attachments.map((att, i) => (
+                      <div
+                        key={i}
+                        className="relative group/att flex items-center gap-1.5 bg-muted px-2 py-1 text-xs text-foreground"
+                      >
+                        {att.type === "image" && att.content && (
+                          <img
+                            src={att.content}
+                            alt={att.name}
+                            className="w-6 h-6 object-cover rounded"
+                          />
+                        )}
+                        <span className="max-w-[120px] truncate">{att.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(i)}
+                          className="p-0.5 text-muted-foreground hover:text-foreground transition"
+                          aria-label={`Remove ${att.name}`}
+                        >
+                          <XIcon className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.txt,.md,.csv,.json,.xml,.yaml,.yml"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
                 {/* Text input area */}
                 <div className="relative">
                   <textarea
@@ -401,11 +554,21 @@ function HomeContent({
                     className="w-full resize-none bg-transparent px-4 pt-4 pb-12 focus:outline-none text-foreground placeholder:text-secondary-foreground disabled:opacity-50"
                     rows={3}
                   />
-                  {/* Submit button */}
+                  {/* Floating action buttons */}
                   <div className="absolute bottom-3 right-3 flex items-center gap-2">
                     {isCreatingSession && (
                       <span className="text-xs text-accent">Warming sandbox...</span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={creating}
+                      className="p-2 text-secondary-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      title="Attach files"
+                      aria-label="Attach files"
+                    >
+                      <PaperclipIcon className="w-5 h-5" />
+                    </button>
                     <button
                       type="submit"
                       disabled={!prompt.trim() || creating || !selectedRepo}

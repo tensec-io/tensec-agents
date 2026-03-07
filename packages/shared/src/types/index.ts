@@ -101,6 +101,9 @@ export interface Attachment {
   mimeType?: string;
 }
 
+// Metadata-only attachment for event history (no file content)
+export type AttachmentMeta = Pick<Attachment, "type" | "name" | "mimeType">;
+
 // Agent event
 export interface AgentEvent {
   id: string;
@@ -265,6 +268,7 @@ export type SandboxEvent =
         name: string;
         avatar?: string;
       };
+      attachments?: AttachmentMeta[];
     };
 
 // WebSocket message types
