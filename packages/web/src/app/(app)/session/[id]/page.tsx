@@ -283,10 +283,7 @@ function SessionPageContent() {
     mutate("/api/sessions");
   };
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
+  const processFiles = useCallback((files: FileList | File[]) => {
     Array.from(files).forEach((file) => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -299,10 +296,52 @@ function SessionPageContent() {
       };
       reader.readAsDataURL(file);
     });
+  }, []);
 
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    processFiles(files);
     // Reset input so the same file can be re-selected
     e.target.value = "";
+  }, [processFiles]);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragging(true);
+    }
   }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      processFiles(files);
+    }
+  }, [processFiles]);
 
   const removeAttachment = useCallback((index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
@@ -355,6 +394,11 @@ function SessionPageContent() {
       handleKeyDown={handleKeyDown}
       handleFileSelect={handleFileSelect}
       removeAttachment={removeAttachment}
+      isDragging={isDragging}
+      handleDragEnter={handleDragEnter}
+      handleDragOver={handleDragOver}
+      handleDragLeave={handleDragLeave}
+      handleDrop={handleDrop}
       setSelectedModel={handleModelChange}
       setReasoningEffort={setReasoningEffort}
       stopExecution={stopExecution}
@@ -393,6 +437,11 @@ function SessionContent({
   handleKeyDown,
   handleFileSelect,
   removeAttachment,
+  isDragging,
+  handleDragEnter,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
   setSelectedModel,
   setReasoningEffort,
   stopExecution,
@@ -427,6 +476,11 @@ function SessionContent({
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   removeAttachment: (index: number) => void;
+  isDragging: boolean;
+  handleDragEnter: (e: React.DragEvent) => void;
+  handleDragOver: (e: React.DragEvent) => void;
+  handleDragLeave: (e: React.DragEvent) => void;
+  handleDrop: (e: React.DragEvent) => void;
   setSelectedModel: (model: string) => void;
   setReasoningEffort: (value: string | undefined) => void;
   stopExecution: () => void;
@@ -803,7 +857,19 @@ function SessionContent({
           </div>
 
           {/* Input container */}
-          <div className="border border-border bg-input">
+          <div
+            className={`relative border bg-input transition-colors ${isDragging ? "border-accent" : "border-border"}`}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {/* Drag overlay */}
+            {isDragging && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 border-2 border-dashed border-accent">
+                <span className="text-sm text-muted-foreground">Drop files here</span>
+              </div>
+            )}
             {/* Attachment previews */}
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 px-4 pt-3">
