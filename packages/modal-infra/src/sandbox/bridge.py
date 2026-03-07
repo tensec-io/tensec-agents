@@ -757,6 +757,38 @@ class AgentBridge:
     }
     ANTHROPIC_ADAPTIVE_EFFORTS: ClassVar[set[str]] = {"low", "medium", "high", "max"}
 
+    # application/* MIME types that are actually text-based code/data files.
+    _TEXT_APPLICATION_MIMES: ClassVar[set[str]] = {
+        "application/javascript",
+        "application/json",
+        "application/ld+json",
+        "application/typescript",
+        "application/x-httpd-php",
+        "application/x-javascript",
+        "application/x-python",
+        "application/x-ruby",
+        "application/x-sh",
+        "application/x-shellscript",
+        "application/x-yaml",
+        "application/xml",
+        "application/yaml",
+    }
+
+    @staticmethod
+    def _normalize_mime_type(mime_type: str) -> str:
+        """Normalize MIME type for OpenCode compatibility.
+
+        OpenCode only handles ``text/plain`` for text-based files — other text
+        MIME types (e.g. ``text/markdown``, ``text/csv``) fall through to the
+        AI SDK which may reject them.  Remap all text-like MIME types to
+        ``text/plain`` so OpenCode decodes the base64 content inline.
+        """
+        if mime_type.startswith("text/"):
+            return "text/plain"
+        if mime_type in AgentBridge._TEXT_APPLICATION_MIMES:
+            return "text/plain"
+        return mime_type
+
     def _build_prompt_request_body(
         self,
         content: str,
@@ -783,6 +815,11 @@ class AgentBridge:
                 mime_type = att.get("mimeType", "application/octet-stream")
                 data_url = att.get("content", "")
                 if data_url:
+                    mime_type = self._normalize_mime_type(mime_type)
+                    # Rewrite the data URL prefix to match the normalized MIME type
+                    if data_url.startswith("data:") and ";" in data_url:
+                        _, rest = data_url.split(";", 1)
+                        data_url = f"data:{mime_type};{rest}"
                     parts.append({
                         "type": "file",
                         "mime": mime_type,

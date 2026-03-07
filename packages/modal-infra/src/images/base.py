@@ -23,8 +23,8 @@ SANDBOX_DIR = Path(__file__).parent.parent / "sandbox"
 OPENCODE_VERSION = "latest"
 
 # Cache buster - change this to force Modal image rebuild
-# v40: Pull latest OpenCode with GPT-5.4 codex allowlist support
-CACHE_BUSTER = "v40-gpt-5-4"
+# v42: fix attachment mime type
+CACHE_BUSTER = "v42-fix-attachment-mime"
 
 # Base image with all development tools
 base_image = (
