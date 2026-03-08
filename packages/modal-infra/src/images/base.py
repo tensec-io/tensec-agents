@@ -23,8 +23,8 @@ SANDBOX_DIR = Path(__file__).parent.parent / "sandbox"
 OPENCODE_VERSION = "latest"
 
 # Cache buster - change this to force Modal image rebuild
-# v42: fix attachment mime type
-CACHE_BUSTER = "v42-fix-attachment-mime"
+# v44: screenshot tool captures browser error pages instead of failing
+CACHE_BUSTER = "v44-screenshot-nav-error"
 
 # Base image with all development tools
 base_image = (
@@ -90,7 +90,6 @@ base_image = (
         "uv",
         "httpx",
         "websockets",
-        "playwright",
         "pydantic>=2.0",  # Required for sandbox types
         "PyJWT[crypto]",  # For GitHub App token generation (includes cryptography)
     )
@@ -103,6 +102,7 @@ base_image = (
         # Install @opencode-ai/plugin globally for custom tools
         # This ensures tools can import the plugin without needing to run bun add
         "npm install -g @opencode-ai/plugin@latest zod",
+        "npm install -g playwright",
     )
     # Install code-server for browser-based VS Code editing
     .run_commands(

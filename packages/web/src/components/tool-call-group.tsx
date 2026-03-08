@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import type { SandboxEvent } from "@/types/session";
+import type { SandboxEvent, Screenshot } from "@/types/session";
 import { formatToolGroup } from "@/lib/tool-formatters";
 import { ToolCallItem } from "./tool-call-item";
 import {
@@ -33,9 +33,11 @@ export const ToolCallGroup = memo(
   function ToolCallGroup({
     events,
     groupId,
+    screenshots,
   }: {
     events: Array<Extract<SandboxEvent, { type: "tool_call" }>>;
     groupId: string;
+    screenshots?: Screenshot[];
   }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -46,6 +48,11 @@ export const ToolCallGroup = memo(
       hour: "2-digit",
       minute: "2-digit",
     });
+
+    const getScreenshotUrl = (event: Extract<SandboxEvent, { type: "tool_call" }>) => {
+      if (event.tool?.toLowerCase() !== "screenshot" || event.status !== "completed") return undefined;
+      return screenshots?.find((s) => s.messageId === event.messageId)?.url;
+    };
 
     const toggleItem = (itemId: string) => {
       setExpandedItems((prev) => {
@@ -66,6 +73,7 @@ export const ToolCallGroup = memo(
           event={firstEvent}
           isExpanded={expandedItems.has(`${groupId}-0`)}
           onToggle={() => toggleItem(`${groupId}-0`)}
+          screenshotUrl={getScreenshotUrl(firstEvent)}
         />
       );
     }
@@ -96,6 +104,7 @@ export const ToolCallGroup = memo(
                 isExpanded={expandedItems.has(`${groupId}-${index}`)}
                 onToggle={() => toggleItem(`${groupId}-${index}`)}
                 showTime={false}
+                screenshotUrl={getScreenshotUrl(event)}
               />
             ))}
           </div>
@@ -106,5 +115,6 @@ export const ToolCallGroup = memo(
   (prev, next) =>
     prev.groupId === next.groupId &&
     prev.events.length === next.events.length &&
-    prev.events.every((e, i) => e === next.events[i])
+    prev.events.every((e, i) => e === next.events[i]) &&
+    prev.screenshots === next.screenshots
 );

@@ -140,6 +140,23 @@ export interface PullRequest {
   updatedAt: string;
 }
 
+/** Image attachment forwarded from a sandbox tool result (pre-R2-upload). */
+export interface ToolAttachment {
+  mime: string;
+  filename: string;
+  /** Base64 data URL — only present on inbound sandbox events, stripped after R2 upload. */
+  dataUrl: string;
+}
+
+/** Metadata stored on screenshot artifacts. */
+export interface ScreenshotArtifactMetadata {
+  tool: string;
+  filename: string;
+  mimeType: string;
+  r2Key: string;
+  sizeBytes: number;
+}
+
 // Sandbox events (from Modal / control-plane synthesized)
 export type SandboxEvent =
   | { type: "heartbeat"; sandboxId: string; status: string; timestamp: number }
@@ -157,6 +174,8 @@ export type SandboxEvent =
       callId: string;
       status?: string;
       output?: string;
+      /** Image attachments from tool result (e.g. screenshots), uploaded to R2 by control plane. */
+      attachments?: ToolAttachment[];
       messageId: string;
       sandboxId: string;
       timestamp: number;
@@ -287,6 +306,15 @@ export type ServerMessage =
   | {
       type: "artifact_created";
       artifact: { id: string; type: string; url: string; prNumber?: number };
+    }
+  | {
+      type: "screenshot_created";
+      screenshotUrl: string;
+      filename: string;
+      tool: string;
+      messageId: string | null;
+      artifactId: string;
+      timestamp: number;
     }
   | { type: "snapshot_saved"; imageId: string; reason: string }
   | { type: "sandbox_restored"; message: string }

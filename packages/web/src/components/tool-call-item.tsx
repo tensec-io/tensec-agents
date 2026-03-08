@@ -19,6 +19,7 @@ interface ToolCallItemProps {
   isExpanded: boolean;
   onToggle: () => void;
   showTime?: boolean;
+  screenshotUrl?: string;
 }
 
 function ToolIcon({ name }: { name: string | null }) {
@@ -48,7 +49,7 @@ function ToolIcon({ name }: { name: string | null }) {
   }
 }
 
-export function ToolCallItem({ event, isExpanded, onToggle, showTime = true }: ToolCallItemProps) {
+export function ToolCallItem({ event, isExpanded, onToggle, showTime = true, screenshotUrl }: ToolCallItemProps) {
   const formatted = formatToolCall(event);
   const isApplyPatch = event.tool?.toLowerCase() === "apply_patch";
   const time = new Date(event.timestamp * 1000).toLocaleTimeString([], {
@@ -110,7 +111,20 @@ export function ToolCallItem({ event, isExpanded, onToggle, showTime = true }: T
               </pre>
             </div>
           )}
-          {!hasNonPatchArgs && !patchText && !output && (
+          {screenshotUrl && (
+            <div className="mt-2">
+              <div className="text-muted-foreground mb-1 font-medium">Screenshot:</div>
+              <a href={screenshotUrl} target="_blank" rel="noopener noreferrer">
+                <img
+                  src={screenshotUrl}
+                  alt={`Screenshot from ${event.tool}`}
+                  className="max-w-full rounded border border-border-muted cursor-pointer hover:opacity-90 transition-opacity"
+                  loading="lazy"
+                />
+              </a>
+            </div>
+          )}
+          {!hasNonPatchArgs && !patchText && !output && !screenshotUrl && (
             <span className="text-secondary-foreground">No details available</span>
           )}
         </div>

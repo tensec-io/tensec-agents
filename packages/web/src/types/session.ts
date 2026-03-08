@@ -22,6 +22,15 @@ export interface Artifact {
 
 export type SandboxEvent = SharedSandboxEvent;
 
+export interface Screenshot {
+  id: string;
+  url: string;
+  filename: string;
+  tool: string;
+  messageId: string | null;
+  timestamp: number;
+}
+
 export interface Task {
   content: string;
   status: "pending" | "in_progress" | "completed";
