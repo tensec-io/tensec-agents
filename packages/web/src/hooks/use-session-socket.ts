@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { mutate } from "swr";
-import type { Artifact, SandboxEvent } from "@/types/session";
+import type { Artifact, SandboxEvent, Screenshot } from "@/types/session";
 import type {
   Attachment,
   ParticipantPresence,
@@ -42,6 +42,7 @@ interface UseSessionSocketReturn {
   events: SandboxEvent[];
   participants: Participant[];
   artifacts: Artifact[];
+  screenshots: Screenshot[];
   currentParticipantId: string | null;
   isProcessing: boolean;
   hasMoreHistory: boolean;
@@ -148,6 +149,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
   const [events, setEvents] = useState<SandboxEvent[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [currentParticipantId, setCurrentParticipantId] = useState<string | null>(null);
   const currentParticipantRef = useRef<{
     participantId: string;
@@ -205,6 +207,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           subscribedRef.current = true;
           // Clear existing state since we're about to receive fresh history
           setArtifacts([]);
+          setScreenshots([]);
           pendingTextRef.current = null;
           if (data.state) {
             setSessionState({
@@ -314,6 +317,31 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
             }
             return [...prev, toUiArtifact(data.artifact)];
           });
+          break;
+
+        case "screenshot_created":
+          setScreenshots((prev) => [
+            ...prev,
+            {
+              id: data.artifactId,
+              url: data.screenshotUrl,
+              filename: data.filename,
+              tool: data.tool,
+              messageId: data.messageId,
+              timestamp: data.timestamp,
+            },
+          ]);
+          // Also add as artifact for the sidebar
+          setArtifacts((prev) => [
+            ...prev,
+            {
+              id: data.artifactId,
+              type: "screenshot" as const,
+              url: data.screenshotUrl,
+              metadata: { filename: data.filename },
+              createdAt: data.timestamp,
+            },
+          ]);
           break;
 
         case "session_status":
@@ -636,6 +664,7 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     events,
     participants,
     artifacts,
+    screenshots,
     currentParticipantId,
     isProcessing,
     hasMoreHistory,
