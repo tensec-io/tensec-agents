@@ -100,7 +100,7 @@ function getSessionStub(env: Env, match: RegExpMatchArray): DurableObjectStub | 
 /**
  * Routes that do not require authentication.
  */
-const PUBLIC_ROUTES: RegExp[] = [/^\/health$/];
+const PUBLIC_ROUTES: RegExp[] = [/^\/health$/, /^\/api\/screenshots\/.+/];
 
 /**
  * Routes that accept sandbox authentication.
@@ -423,6 +423,13 @@ const routes: Route[] = [
     method: "POST",
     pattern: parsePattern("/sessions/:id/children/:childId/cancel"),
     handler: handleCancelChild,
+  },
+
+  // Screenshot serving — proxies from R2
+  {
+    method: "GET",
+    pattern: /^\/api\/screenshots\/(?<r2Key>.+)$/,
+    handler: handleScreenshot,
   },
 
   // Repository management
@@ -1555,4 +1562,36 @@ async function handleCancelChild(
   }
 
   return response;
+}
+
+// Screenshot serving handler
+
+async function handleScreenshot(
+  _request: Request,
+  env: Env,
+  match: RegExpMatchArray,
+  _ctx: RequestContext
+): Promise<Response> {
+  const r2Key = match.groups?.r2Key;
+
+  if (!r2Key || !r2Key.startsWith("screenshots/")) {
+    return error("Not found", 404);
+  }
+
+  const r2 = env.ATTACHMENTS;
+  if (!r2) {
+    return error("Storage not configured", 503);
+  }
+
+  const object = await r2.get(r2Key);
+  if (!object) {
+    return error("Not found", 404);
+  }
+
+  const headers = new Headers();
+  headers.set("Content-Type", object.httpMetadata?.contentType || "image/png");
+  headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  headers.set("Content-Length", String(object.size));
+
+  return new Response(object.body, { headers });
 }
