@@ -15,10 +15,12 @@ import contextlib
 import json
 import os
 import secrets
+import shutil
 import subprocess
 import tempfile
 import time
 from collections.abc import AsyncIterator
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -147,6 +149,9 @@ class AgentBridge:
         "push_complete",
         "push_error",
     }
+    SCREENSHOT_DIR: ClassVar[Path] = Path("/tmp/screenshots")
+    SCREENSHOT_ARCHIVE_DIR: ClassVar[Path] = Path("/tmp/screenshots/archive")
+    SCREENSHOT_LOG_PATH: ClassVar[Path] = Path("/tmp/screenshots/screenshot.log")
 
     def __init__(
         self,
@@ -690,30 +695,72 @@ class AgentBridge:
         return str(error) if error else None
 
     @staticmethod
+    def _screenshot_log(message: str) -> None:
+        """Append a plain-text line to the shared screenshot log file."""
+        try:
+            AgentBridge.SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+            ts = datetime.now(timezone.utc).isoformat()
+            with AgentBridge.SCREENSHOT_LOG_PATH.open("a") as f:
+                f.write(f"[{ts}] [bridge] {message}\n")
+        except Exception:
+            pass
+
+    @staticmethod
     def _read_screenshot_pending() -> dict[str, str] | None:
         """Read and consume the screenshot sidecar written by the screenshot tool.
 
         Returns a ToolAttachment-shaped dict or None if no pending screenshot exists.
         """
-        pending_path = Path("/tmp/screenshots/pending.json")
+        pending_path = AgentBridge.SCREENSHOT_DIR / "pending.json"
+        png_path = AgentBridge.SCREENSHOT_DIR / "screenshot.png"
+        archive_dir = AgentBridge.SCREENSHOT_ARCHIVE_DIR
+
         if not pending_path.exists():
+            AgentBridge._screenshot_log("Checking for pending.json — not found")
             return None
+
+        AgentBridge._screenshot_log("Checking for pending.json — found")
         try:
             data = json.loads(pending_path.read_text())
-            pending_path.unlink(missing_ok=True)
-            if (
+            data_url = data.get("dataUrl", "") if isinstance(data, dict) else ""
+            mime = data.get("mime", "") if isinstance(data, dict) else ""
+            AgentBridge._screenshot_log(
+                f"Read pending.json — dataUrl size={len(data_url)}, mime={mime}"
+            )
+
+            if not (
                 isinstance(data, dict)
-                and isinstance(data.get("mime", ""), str)
-                and data["mime"].startswith("image/")
-                and isinstance(data.get("dataUrl", ""), str)
-                and data["dataUrl"].startswith("data:")
+                and isinstance(mime, str)
+                and mime.startswith("image/")
+                and isinstance(data_url, str)
+                and data_url.startswith("data:")
             ):
-                return {
-                    "mime": data["mime"],
-                    "filename": data.get("filename", "screenshot.png"),
-                    "dataUrl": data["dataUrl"],
-                }
-        except Exception:
+                AgentBridge._screenshot_log(
+                    f"Validation failure — mime={mime!r}, "
+                    f"dataUrl starts with data:={data_url[:5] == 'data:' if data_url else False}"
+                )
+                pending_path.unlink(missing_ok=True)
+                return None
+
+            # Archive instead of deleting
+            try:
+                archive_dir.mkdir(parents=True, exist_ok=True)
+                ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
+                shutil.move(str(pending_path), str(archive_dir / f"{ts}-pending.json"))
+                if png_path.exists():
+                    shutil.move(str(png_path), str(archive_dir / f"{ts}-screenshot.png"))
+                AgentBridge._screenshot_log(f"Archived to {archive_dir}/{ts}-*")
+            except Exception as archive_err:
+                AgentBridge._screenshot_log(f"Archive error: {archive_err}")
+                pending_path.unlink(missing_ok=True)
+
+            return {
+                "mime": mime,
+                "filename": data.get("filename", "screenshot.png"),
+                "dataUrl": data_url,
+            }
+        except Exception as exc:
+            AgentBridge._screenshot_log(f"Error during read: {exc}")
             pending_path.unlink(missing_ok=True)
         return None
 
@@ -762,6 +809,9 @@ class AgentBridge:
             # OpenCode plugin framework only supports string tool results).
             # We read it here where we have the correct messageId for UI correlation.
             if event["tool"] == "screenshot" and status == "completed":
+                self._screenshot_log(
+                    f"Screenshot tool completed — reading pending sidecar (messageId={message_id})"
+                )
                 pending = self._read_screenshot_pending()
                 if pending:
                     event["attachments"] = [pending]
@@ -770,6 +820,12 @@ class AgentBridge:
                         tool=event["tool"],
                         count=1,
                     )
+                    self._screenshot_log(
+                        f"Forwarding screenshot attachment — "
+                        f"mime={pending['mime']}, dataUrl size={len(pending.get('dataUrl', ''))}"
+                    )
+                else:
+                    self._screenshot_log("No pending screenshot found after tool completion")
 
             return event
         elif part_type == "step-finish":
