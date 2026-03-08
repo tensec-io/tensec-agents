@@ -1,17 +1,23 @@
 /**
  * Screenshot Tool — captures a browser screenshot using Playwright.
  *
- * Returns the image as a base64 data URL attachment so the LLM can see it,
- * and the bridge forwards it to the control plane for R2 storage + UI display.
+ * Saves the PNG to disk and writes a JSON sidecar with the base64 data URL.
+ * The bridge reads the sidecar when the tool_call completes and forwards
+ * the image to the control plane for R2 storage + web UI display.
+ *
+ * Returns a plain string (OpenCode plugin framework requirement).
  */
 import { tool } from "@opencode-ai/plugin"
 import { z } from "zod"
+import { mkdirSync, writeFileSync } from "node:fs"
+
+const SCREENSHOT_DIR = "/tmp/screenshots"
 
 export default tool({
   name: "screenshot",
   description:
     "Take a screenshot of a web page. Use this when doing frontend work to verify visual changes. " +
-    "The screenshot will be shown to you as an image and also displayed to the user in the UI. " +
+    "The screenshot will be displayed to the user in the UI. " +
     "Provide a URL (e.g. http://localhost:3000) and optionally set fullPage to capture the entire page.",
   args: {
     url: z.string().url().describe("The URL to screenshot (e.g. http://localhost:3000)."),
@@ -48,30 +54,27 @@ export default tool({
 
       const base64 = buffer.toString("base64")
       const dataUrl = `data:image/png;base64,${base64}`
+      const sizeKB = Math.round(buffer.length / 1024)
 
-      const status = navigationError
-        ? `Screenshot captured (${Math.round(buffer.length / 1024)} KB) but the page had a navigation error: ${navigationError}`
-        : `Screenshot captured successfully (${Math.round(buffer.length / 1024)} KB).`
+      // Persist to disk so the bridge can pick up the image data
+      mkdirSync(SCREENSHOT_DIR, { recursive: true })
+      writeFileSync(`${SCREENSHOT_DIR}/screenshot.png`, buffer)
+      writeFileSync(
+        `${SCREENSHOT_DIR}/pending.json`,
+        JSON.stringify({
+          type: "file",
+          mime: "image/png",
+          filename: "screenshot.png",
+          dataUrl,
+        })
+      )
 
-      return {
-        title: `Screenshot of ${args.url}`,
-        output: status,
-        metadata: { url: args.url, fullPage: args.fullPage, sizeBytes: buffer.length },
-        attachments: [
-          {
-            type: "file",
-            mime: "image/png",
-            url: dataUrl,
-            filename: "screenshot.png",
-          },
-        ],
+      if (navigationError) {
+        return `Screenshot captured (${sizeKB} KB) but the page had a navigation error: ${navigationError}\nSaved to ${SCREENSHOT_DIR}/screenshot.png`
       }
+      return `Screenshot captured successfully (${sizeKB} KB).\nSaved to ${SCREENSHOT_DIR}/screenshot.png`
     } catch (error) {
-      return {
-        title: `Screenshot failed`,
-        output: `Failed to capture screenshot of ${args.url}: ${error.message}`,
-        metadata: { url: args.url, error: error.message },
-      }
+      return `Failed to capture screenshot of ${args.url}: ${error.message}`
     } finally {
       if (browser) {
         await browser.close().catch(() => {})

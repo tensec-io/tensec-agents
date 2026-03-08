@@ -689,6 +689,34 @@ class AgentBridge:
             return error.get("message") or error.get("name")
         return str(error) if error else None
 
+    @staticmethod
+    def _read_screenshot_pending() -> dict[str, str] | None:
+        """Read and consume the screenshot sidecar written by the screenshot tool.
+
+        Returns a ToolAttachment-shaped dict or None if no pending screenshot exists.
+        """
+        pending_path = Path("/tmp/screenshots/pending.json")
+        if not pending_path.exists():
+            return None
+        try:
+            data = json.loads(pending_path.read_text())
+            pending_path.unlink(missing_ok=True)
+            if (
+                isinstance(data, dict)
+                and isinstance(data.get("mime", ""), str)
+                and data["mime"].startswith("image/")
+                and isinstance(data.get("dataUrl", ""), str)
+                and data["dataUrl"].startswith("data:")
+            ):
+                return {
+                    "mime": data["mime"],
+                    "filename": data.get("filename", "screenshot.png"),
+                    "dataUrl": data["dataUrl"],
+                }
+        except Exception:
+            pending_path.unlink(missing_ok=True)
+        return None
+
     def _transform_part_to_event(
         self,
         part: dict[str, Any],
@@ -729,30 +757,18 @@ class AgentBridge:
                 "messageId": message_id,
             }
 
-            # Forward image attachments (e.g. screenshots) to control plane for R2 upload
-            attachments = state.get("attachments")
-            if attachments and isinstance(attachments, list):
-                image_attachments = []
-                for att in attachments:
-                    if (
-                        isinstance(att, dict)
-                        and att.get("type") == "file"
-                        and isinstance(att.get("mime", ""), str)
-                        and att["mime"].startswith("image/")
-                        and isinstance(att.get("url", ""), str)
-                        and att["url"].startswith("data:")
-                    ):
-                        image_attachments.append({
-                            "mime": att["mime"],
-                            "filename": att.get("filename", "screenshot.png"),
-                            "dataUrl": att["url"],
-                        })
-                if image_attachments:
-                    event["attachments"] = image_attachments
+            # Forward screenshot images to control plane for R2 upload.
+            # The screenshot tool writes a JSON sidecar to disk (because the
+            # OpenCode plugin framework only supports string tool results).
+            # We read it here where we have the correct messageId for UI correlation.
+            if event["tool"] == "screenshot" and status == "completed":
+                pending = self._read_screenshot_pending()
+                if pending:
+                    event["attachments"] = [pending]
                     self.log.info(
                         "bridge.tool_attachments",
                         tool=event["tool"],
-                        count=len(image_attachments),
+                        count=1,
                     )
 
             return event
@@ -848,12 +864,14 @@ class AgentBridge:
                     if data_url.startswith("data:") and ";" in data_url:
                         _, rest = data_url.split(";", 1)
                         data_url = f"data:{mime_type};{rest}"
-                    parts.append({
-                        "type": "file",
-                        "mime": mime_type,
-                        "url": data_url,
-                        "filename": att.get("name", ""),
-                    })
+                    parts.append(
+                        {
+                            "type": "file",
+                            "mime": mime_type,
+                            "url": data_url,
+                            "filename": att.get("name", ""),
+                        }
+                    )
 
         request_body: dict[str, Any] = {"parts": parts}
 
