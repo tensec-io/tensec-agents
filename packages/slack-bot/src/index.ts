@@ -6,7 +6,14 @@
  */
 
 import { Hono } from "hono";
-import type { Env, RepoConfig, CallbackContext, ThreadSession, UserPreferences } from "./types";
+import type {
+  Env,
+  RepoConfig,
+  CallbackContext,
+  ThreadSession,
+  UserPreferences,
+  UserMapping,
+} from "./types";
 import {
   verifySlackSignature,
   postMessage,
@@ -63,6 +70,7 @@ async function createSession(
   title: string | undefined,
   model: string,
   reasoningEffort: string | undefined,
+  scm?: { scmLogin: string; scmName?: string; scmEmail?: string; scmUserId?: string },
   traceId?: string
 ): Promise<{ sessionId: string; status: string } | null> {
   const startTime = Date.now();
@@ -84,6 +92,8 @@ async function createSession(
         title: title || `Slack: ${repo.name}`,
         model,
         reasoningEffort,
+        ...(scm && { scmLogin: scm.scmLogin, scmName: scm.scmName, scmEmail: scm.scmEmail, scmUserId: scm.scmUserId }),
+        ...(scm?.scmUserId && { userId: scm.scmUserId }),
       }),
     });
 
@@ -250,6 +260,21 @@ async function clearThreadSession(env: Env, channel: string, threadTs: string): 
       error: e instanceof Error ? e : new Error(String(e)),
     });
   }
+}
+
+/**
+ * Read the Slack user→GitHub identity mapping from KV.
+ */
+async function getUserMapping(env: Env): Promise<UserMapping> {
+  try {
+    const data = await env.SLACK_KV.get("config:user-mapping", "json");
+    if (data && typeof data === "object") return data as UserMapping;
+  } catch (e) {
+    log.debug("kv.get_user_mapping_failed", {
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+  return {};
 }
 
 /**
@@ -554,6 +579,13 @@ async function startSessionAndSendPrompt(
       ? userPrefs.reasoningEffort
       : getDefaultReasoningEffort(model);
 
+  // Resolve SCM identity from Slack user mapping
+  const userMapping = await getUserMapping(env);
+  const mapped = userMapping[userId];
+  const scm = mapped
+    ? { scmLogin: mapped.githubLogin, scmEmail: mapped.email, scmUserId: mapped.githubUserId }
+    : undefined;
+
   // Create session via control plane with user's preferred model and reasoning effort
   const session = await createSession(
     env,
@@ -561,6 +593,7 @@ async function startSessionAndSendPrompt(
     messageText.slice(0, 100),
     model,
     reasoningEffort,
+    scm,
     traceId
   );
 
@@ -601,7 +634,7 @@ async function startSessionAndSendPrompt(
     env,
     session.sessionId,
     promptContent,
-    `slack:${userId}`,
+    scm?.scmUserId || `slack:${userId}`,
     callbackContext,
     traceId
   );
@@ -875,6 +908,11 @@ async function handleAppMention(
     // Channel info not available
   }
 
+  // Resolve SCM identity for authorId in follow-up prompts
+  const userMapping = await getUserMapping(env);
+  const mappedUser = userMapping[event.user];
+  const authorId = mappedUser?.githubUserId || `slack:${event.user}`;
+
   if (thread_ts) {
     const existingSession = await lookupThreadSession(env, channel, thread_ts);
     if (existingSession) {
@@ -898,7 +936,7 @@ async function handleAppMention(
         env,
         existingSession.sessionId,
         promptContent,
-        `slack:${event.user}`,
+        authorId,
         callbackContext,
         traceId
       );
