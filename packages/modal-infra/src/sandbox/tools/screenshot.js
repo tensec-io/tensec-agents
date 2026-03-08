@@ -31,7 +31,9 @@ export default tool({
   description:
     "Take a screenshot of a web page. Use this when doing frontend work to verify visual changes. " +
     "The screenshot will be displayed to the user in the UI. " +
-    "Provide a URL (e.g. http://localhost:3000) and optionally set fullPage to capture the entire page.",
+    "Provide a URL (e.g. http://localhost:3000) and optionally set fullPage to capture the entire page. " +
+    "Limit yourself to at most 2 screenshots per task. " +
+    "If the page doesn't fully load or looks broken, report what you see rather than retaking the screenshot — the app may have a bug that won't resolve with retries.",
   args: {
     url: z.string().url().describe("The URL to screenshot (e.g. http://localhost:3000)."),
     fullPage: z
