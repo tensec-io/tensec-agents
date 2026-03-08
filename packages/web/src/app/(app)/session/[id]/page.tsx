@@ -185,6 +185,7 @@ function SessionPageContent() {
     events,
     participants,
     artifacts,
+    screenshots,
     currentParticipantId,
     isProcessing,
     loadingHistory,
@@ -381,6 +382,7 @@ function SessionPageContent() {
       participants={participants}
       events={events}
       artifacts={artifacts}
+      screenshots={screenshots}
       currentParticipantId={currentParticipantId}
       messagesEndRef={messagesEndRef}
       prompt={prompt}
@@ -424,6 +426,7 @@ function SessionContent({
   participants,
   events,
   artifacts,
+  screenshots,
   currentParticipantId,
   messagesEndRef,
   prompt,
@@ -463,6 +466,7 @@ function SessionContent({
   participants: ReturnType<typeof useSessionSocket>["participants"];
   events: ReturnType<typeof useSessionSocket>["events"];
   artifacts: ReturnType<typeof useSessionSocket>["artifacts"];
+  screenshots: ReturnType<typeof useSessionSocket>["screenshots"];
   currentParticipantId: string | null;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   prompt: string;
@@ -735,7 +739,7 @@ function SessionContent({
             ) : (
               groupedEvents.map((group) =>
                 group.type === "tool_group" ? (
-                  <ToolCallGroup key={group.id} events={group.events} groupId={group.id} />
+                  <ToolCallGroup key={group.id} events={group.events} groupId={group.id} screenshots={screenshots} />
                 ) : (
                   <EventItem
                     key={group.id}

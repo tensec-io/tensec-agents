@@ -278,6 +278,16 @@ export function formatToolCall(event: ToolCallEvent): FormattedToolCall {
       };
     }
 
+    case "screenshot": {
+      const url = getStringArg(args, "url");
+      return {
+        toolName: "Screenshot",
+        summary: url ? truncate(url, 40) : "page",
+        icon: "globe",
+        getDetails: () => ({ args, output }),
+      };
+    }
+
     default:
       return {
         toolName: tool || "Unknown",
