@@ -22,6 +22,7 @@ interface SessionSandboxEventProcessorDeps {
   updateLastActivity: (timestamp: number) => void;
   scheduleInactivityCheck: () => Promise<void>;
   processMessageQueue: () => Promise<void>;
+  r2?: R2Bucket;
 }
 
 /** Event types that require delivery acknowledgement. */
@@ -74,16 +75,23 @@ export class SessionSandboxEventProcessor {
 
     if (event.type === "tool_call") {
       this.deps.updateLastActivity(now);
+
+      // Strip attachments before persisting/broadcasting (they're large base64 blobs)
+      const attachments = event.attachments;
+      const eventForStorage = attachments ? { ...event, attachments: undefined } : event;
+
       if (shouldPersistToolCallEvent(event.status)) {
         this.deps.repository.createEvent({
           id: generateId(),
           type: event.type,
-          data: JSON.stringify(event),
+          data: JSON.stringify(eventForStorage),
           messageId,
           createdAt: now,
         });
       }
-      this.deps.broadcast({ type: "sandbox_event", event });
+
+      // Broadcast the tool_call without attachments (they'd bloat client WS messages)
+      this.deps.broadcast({ type: "sandbox_event", event: eventForStorage as SandboxEvent });
 
       if (messageId && event.status === "running") {
         this.deps.ctx.waitUntil(
@@ -95,6 +103,14 @@ export class SessionSandboxEventProcessor {
           })
         );
       }
+
+      // Upload image attachments to R2 and create screenshot artifacts
+      if (attachments?.length && this.deps.r2) {
+        this.deps.ctx.waitUntil(
+          this.uploadScreenshotAttachments(attachments, event.tool, messageId, now)
+        );
+      }
+
       return;
     }
 
@@ -192,6 +208,74 @@ export class SessionSandboxEventProcessor {
 
     if (CRITICAL_EVENT_TYPES.has(event.type)) {
       this.sendAck(ackId);
+    }
+  }
+
+  private async uploadScreenshotAttachments(
+    attachments: NonNullable<(SandboxEvent & { type: "tool_call" })["attachments"]>,
+    tool: string,
+    messageId: string | null,
+    timestamp: number
+  ): Promise<void> {
+    const r2 = this.deps.r2;
+    if (!r2) return;
+
+    for (const att of attachments) {
+      try {
+        const match = att.dataUrl.match(/^data:([^;]+);base64,(.+)$/s);
+        if (!match) {
+          this.deps.log.warn("screenshot.upload.invalid_data_url", { filename: att.filename });
+          continue;
+        }
+
+        const binaryString = atob(match[2]);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const r2Key = `screenshots/${crypto.randomUUID()}-${att.filename}`;
+        await r2.put(r2Key, bytes, {
+          httpMetadata: { contentType: att.mime },
+        });
+
+        const artifactId = generateId();
+        this.deps.repository.createArtifact({
+          id: artifactId,
+          type: "screenshot",
+          url: null,
+          metadata: JSON.stringify({
+            tool,
+            filename: att.filename,
+            mimeType: att.mime,
+            r2Key,
+            sizeBytes: bytes.length,
+          }),
+          createdAt: timestamp,
+        });
+
+        this.deps.broadcast({
+          type: "screenshot_created",
+          screenshotUrl: `/api/screenshots/${r2Key}`,
+          filename: att.filename,
+          tool,
+          messageId,
+          artifactId,
+          timestamp,
+        });
+
+        this.deps.log.info("screenshot.uploaded", {
+          artifact_id: artifactId,
+          r2_key: r2Key,
+          size_bytes: bytes.length,
+          tool,
+        });
+      } catch (error) {
+        this.deps.log.error("screenshot.upload.failed", {
+          filename: att.filename,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 
