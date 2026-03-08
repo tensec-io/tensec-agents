@@ -54,14 +54,12 @@ export default tool({
       log("Browser launched")
       const page = await browser.newPage({ viewport: { width: 1280, height: 720 } })
 
-      // Catch navigation errors (connection refused, DNS failure, HTTP errors)
-      // so we still capture the browser's error page as the screenshot.
-      let navigationError
+      let networkIdleReached = true
       try {
-        await page.goto(args.url, { waitUntil: "networkidle", timeout: 30000 })
+        await page.goto(args.url, { waitUntil: "networkidle", timeout: 15000 })
       } catch (err) {
-        navigationError = err.message
-        logError("Navigation error (non-fatal, continuing to capture)", err)
+        networkIdleReached = false
+        logError("Navigation warning (continuing to capture)", err)
       }
 
       const buffer = await page.screenshot({
@@ -98,10 +96,8 @@ export default tool({
         logError("Failed to archive screenshot", archiveErr)
       }
 
-      if (navigationError) {
-        return `Screenshot captured (${sizeKB} KB) but the page had a navigation error: ${navigationError}\nSaved to ${SCREENSHOT_DIR}/screenshot.png`
-      }
-      return `Screenshot captured successfully (${sizeKB} KB).\nSaved to ${SCREENSHOT_DIR}/screenshot.png`
+      const idle = networkIdleReached ? "" : " (network idle not reached — page may still be loading)"
+      return `Screenshot captured (${sizeKB} KB)${idle}.\nSaved to ${SCREENSHOT_DIR}/screenshot.png`
     } catch (error) {
       logError("Fatal error", error)
       return `Failed to capture screenshot of ${args.url}: ${error.message}`
