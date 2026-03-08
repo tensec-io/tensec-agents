@@ -719,7 +719,7 @@ class AgentBridge:
             if status in ("pending", "") and not tool_input:
                 return None
 
-            return {
+            event = {
                 "type": "tool_call",
                 "tool": part.get("tool", ""),
                 "args": tool_input,
@@ -728,6 +728,34 @@ class AgentBridge:
                 "output": state.get("output", ""),
                 "messageId": message_id,
             }
+
+            # Forward image attachments (e.g. screenshots) to control plane for R2 upload
+            attachments = state.get("attachments")
+            if attachments and isinstance(attachments, list):
+                image_attachments = []
+                for att in attachments:
+                    if (
+                        isinstance(att, dict)
+                        and att.get("type") == "file"
+                        and isinstance(att.get("mime", ""), str)
+                        and att["mime"].startswith("image/")
+                        and isinstance(att.get("url", ""), str)
+                        and att["url"].startswith("data:")
+                    ):
+                        image_attachments.append({
+                            "mime": att["mime"],
+                            "filename": att.get("filename", "screenshot.png"),
+                            "dataUrl": att["url"],
+                        })
+                if image_attachments:
+                    event["attachments"] = image_attachments
+                    self.log.info(
+                        "bridge.tool_attachments",
+                        tool=event["tool"],
+                        count=len(image_attachments),
+                    )
+
+            return event
         elif part_type == "step-finish":
             return {
                 "type": "step_finish",
