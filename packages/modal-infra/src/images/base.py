@@ -23,8 +23,8 @@ SANDBOX_DIR = Path(__file__).parent.parent / "sandbox"
 OPENCODE_VERSION = "latest"
 
 # Cache buster - change this to force Modal image rebuild
-# v43: switch playwright to npm, add screenshot tool
-CACHE_BUSTER = "v43-screenshot-tool"
+# v44: screenshot tool captures browser error pages instead of failing
+CACHE_BUSTER = "v44-screenshot-nav-error"
 
 # Base image with all development tools
 base_image = (

@@ -32,7 +32,14 @@ export default tool({
       })
       const page = await browser.newPage({ viewport: { width: 1280, height: 720 } })
 
-      await page.goto(args.url, { waitUntil: "networkidle", timeout: 30000 })
+      // Catch navigation errors (connection refused, DNS failure, HTTP errors)
+      // so we still capture the browser's error page as the screenshot.
+      let navigationError
+      try {
+        await page.goto(args.url, { waitUntil: "networkidle", timeout: 30000 })
+      } catch (err) {
+        navigationError = err.message
+      }
 
       const buffer = await page.screenshot({
         fullPage: args.fullPage,
@@ -42,9 +49,13 @@ export default tool({
       const base64 = buffer.toString("base64")
       const dataUrl = `data:image/png;base64,${base64}`
 
+      const status = navigationError
+        ? `Screenshot captured (${Math.round(buffer.length / 1024)} KB) but the page had a navigation error: ${navigationError}`
+        : `Screenshot captured successfully (${Math.round(buffer.length / 1024)} KB).`
+
       return {
         title: `Screenshot of ${args.url}`,
-        output: `Screenshot captured successfully (${Math.round(buffer.length / 1024)} KB).`,
+        output: status,
         metadata: { url: args.url, fullPage: args.fullPage, sizeBytes: buffer.length },
         attachments: [
           {
