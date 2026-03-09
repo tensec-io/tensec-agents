@@ -47,6 +47,7 @@ export interface CreateSandboxResponse {
   createdAt: number;
   codeServerUrl?: string;
   codeServerPassword?: string;
+  devServerUrl?: string;
 }
 
 export interface RestoreSandboxRequest {
@@ -71,6 +72,7 @@ export interface RestoreSandboxResponse {
   error?: string;
   codeServerUrl?: string;
   codeServerPassword?: string;
+  devServerUrl?: string;
 }
 
 export interface SnapshotSandboxRequest {
@@ -265,6 +267,7 @@ export class ModalClient {
         created_at: number;
         code_server_url?: string;
         code_server_password?: string;
+        dev_server_url?: string;
       }>;
 
       if (!result.success || !result.data) {
@@ -279,6 +282,7 @@ export class ModalClient {
         createdAt: result.data.created_at,
         codeServerUrl: result.data.code_server_url,
         codeServerPassword: result.data.code_server_password,
+        devServerUrl: result.data.dev_server_url,
       };
     } finally {
       log.info("modal.request", {
@@ -342,6 +346,7 @@ export class ModalClient {
         modal_object_id?: string;
         code_server_url?: string;
         code_server_password?: string;
+        dev_server_url?: string;
       }>;
 
       if (!result.success) {
@@ -355,6 +360,7 @@ export class ModalClient {
         modalObjectId: result.data?.modal_object_id,
         codeServerUrl: result.data?.code_server_url,
         codeServerPassword: result.data?.code_server_password,
+        devServerUrl: result.data?.dev_server_url,
       };
     } finally {
       log.info("modal.request", {

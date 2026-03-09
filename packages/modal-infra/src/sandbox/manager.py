@@ -60,6 +60,7 @@ class SandboxHandle:
     modal_object_id: str | None = None  # Modal's internal sandbox ID for API calls
     code_server_url: str | None = None
     code_server_password: str | None = None
+    dev_server_url: str | None = None
 
     def get_logs(self) -> str:
         """Get sandbox logs."""
@@ -111,6 +112,21 @@ class SandboxManager:
             return tunnel.url
         except Exception as e:
             log.warn("code_server.tunnel_error", sandbox_id=sandbox_id, exc=e)
+            return None
+
+    @staticmethod
+    async def _resolve_dev_server_tunnel(
+        sandbox: modal.Sandbox, port: int, sandbox_id: str
+    ) -> str | None:
+        """Resolve the dev server tunnel URL from Modal, returning None on failure."""
+        try:
+            loop = asyncio.get_event_loop()
+            tunnels = await loop.run_in_executor(None, sandbox.tunnels)
+            tunnel = tunnels[port]
+            log.info("dev_server.tunnel", sandbox_id=sandbox_id, port=port, url=tunnel.url)
+            return tunnel.url
+        except Exception as e:
+            log.warn("dev_server.tunnel_error", sandbox_id=sandbox_id, port=port, exc=e)
             return None
 
     @staticmethod
@@ -176,6 +192,13 @@ class SandboxManager:
 
         code_server_password = self._generate_code_server_credentials(env_vars)
 
+        # Check for dev server port configuration
+        dev_server_port: int | None = None
+        if config.user_env_vars:
+            port_str = config.user_env_vars.get("DEV_SERVER_PORT")
+            if port_str:
+                dev_server_port = int(port_str)
+
         if config.session_config:
             env_vars["SESSION_CONFIG"] = config.session_config.model_dump_json()
 
@@ -189,6 +212,10 @@ class SandboxManager:
         else:
             image = base_image
 
+        encrypted_ports = [CODE_SERVER_PORT]
+        if dev_server_port:
+            encrypted_ports.append(dev_server_port)
+
         # Create the sandbox
         # The entrypoint command is passed as positional args
         sandbox = modal.Sandbox.create(
@@ -201,12 +228,18 @@ class SandboxManager:
             timeout=config.timeout_seconds,
             workdir="/workspace",
             env=env_vars,
-            encrypted_ports=[CODE_SERVER_PORT],
+            encrypted_ports=encrypted_ports,
         )
 
         # Get Modal's internal object ID for API calls (snapshot, etc.)
         modal_object_id = sandbox.object_id
         code_server_url = await self._resolve_code_server_tunnel(sandbox, sandbox_id)
+
+        dev_server_url: str | None = None
+        if dev_server_port:
+            dev_server_url = await self._resolve_dev_server_tunnel(
+                sandbox, dev_server_port, sandbox_id
+            )
 
         duration_ms = int((time.time() - start_time) * 1000)
         log.info(
@@ -228,6 +261,7 @@ class SandboxManager:
             modal_object_id=modal_object_id,
             code_server_url=code_server_url,
             code_server_password=code_server_password,
+            dev_server_url=dev_server_url,
         )
 
     async def create_build_sandbox(
@@ -494,6 +528,17 @@ class SandboxManager:
 
         code_server_password = self._generate_code_server_credentials(env_vars)
 
+        # Check for dev server port configuration
+        dev_server_port: int | None = None
+        if user_env_vars:
+            port_str = user_env_vars.get("DEV_SERVER_PORT")
+            if port_str:
+                dev_server_port = int(port_str)
+
+        encrypted_ports = [CODE_SERVER_PORT]
+        if dev_server_port:
+            encrypted_ports.append(dev_server_port)
+
         # Create the sandbox from the snapshot image
         sandbox = modal.Sandbox.create(
             "python",
@@ -505,11 +550,17 @@ class SandboxManager:
             timeout=timeout_seconds,
             workdir="/workspace",
             env=env_vars,
-            encrypted_ports=[CODE_SERVER_PORT],
+            encrypted_ports=encrypted_ports,
         )
 
         modal_object_id = sandbox.object_id
         code_server_url = await self._resolve_code_server_tunnel(sandbox, sandbox_id)
+
+        dev_server_url: str | None = None
+        if dev_server_port:
+            dev_server_url = await self._resolve_dev_server_tunnel(
+                sandbox, dev_server_port, sandbox_id
+            )
 
         duration_ms = int((time.time() - start_time) * 1000)
         log.info(
@@ -532,6 +583,7 @@ class SandboxManager:
             modal_object_id=modal_object_id,
             code_server_url=code_server_url,
             code_server_password=code_server_password,
+            dev_server_url=dev_server_url,
         )
 
     async def maintain_warm_pool(

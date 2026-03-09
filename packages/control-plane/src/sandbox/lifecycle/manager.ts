@@ -82,6 +82,8 @@ export interface SandboxStorage {
   setLastSpawnError(error: string | null, timestamp: number | null): void;
   /** Update code-server URL and password on the sandbox row */
   updateSandboxCodeServer(url: string, password: string): void;
+  /** Update dev server URL on the sandbox row */
+  updateSandboxDevServer(url: string): void;
 }
 
 /**
@@ -396,6 +398,11 @@ export class SandboxLifecycleManager {
         this.storeAndBroadcastCodeServer(result.codeServerUrl, result.codeServerPassword ?? "");
       }
 
+      // Store dev server details and push to connected clients
+      if (result.devServerUrl) {
+        this.storeAndBroadcastDevServer(result.devServerUrl);
+      }
+
       this.storage.updateSandboxStatus("connecting");
       this.broadcaster.broadcast({ type: "sandbox_status", status: "connecting" });
 
@@ -515,6 +522,11 @@ export class SandboxLifecycleManager {
         // Store code-server details and push to connected clients
         if (result.codeServerUrl) {
           this.storeAndBroadcastCodeServer(result.codeServerUrl, result.codeServerPassword ?? "");
+        }
+
+        // Store dev server details and push to connected clients
+        if (result.devServerUrl) {
+          this.storeAndBroadcastDevServer(result.devServerUrl);
         }
 
         this.storage.updateSandboxStatus("connecting");
@@ -825,6 +837,14 @@ export class SandboxLifecycleManager {
       type: "code_server_info",
       url,
       password,
+    });
+  }
+
+  private storeAndBroadcastDevServer(url: string): void {
+    this.storage.updateSandboxDevServer(url);
+    this.broadcaster.broadcast({
+      type: "dev_server_info",
+      url,
     });
   }
 
