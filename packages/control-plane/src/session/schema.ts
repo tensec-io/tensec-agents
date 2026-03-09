@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS sandbox (
   last_spawn_failure INTEGER,                       -- Timestamp of last spawn failure
   code_server_url TEXT,                             -- Code-server tunnel URL (rotates on wake/restore)
   code_server_password TEXT,                        -- Code-server password (rotates on each wake/restore)
+  dev_server_url TEXT,                              -- Dev server tunnel URL (rotates on wake/restore)
   created_at INTEGER NOT NULL
 );
 
@@ -348,6 +349,11 @@ export const MIGRATIONS: readonly SchemaMigration[] = [
       ALTER TABLE sandbox ADD COLUMN code_server_url TEXT;
       ALTER TABLE sandbox ADD COLUMN code_server_password TEXT;
     `,
+  },
+  {
+    id: 27,
+    description: "Add dev server URL to sandbox",
+    run: `ALTER TABLE sandbox ADD COLUMN dev_server_url TEXT`,
   },
 ];
 
