@@ -43,6 +43,9 @@ function createSandbox(overrides: Partial<SandboxRow> = {}): SandboxRow {
     last_activity: null,
     last_spawn_error: null,
     last_spawn_error_at: null,
+    code_server_url: null,
+    code_server_password: null,
+    dev_server_url: null,
     created_at: 1,
     ...overrides,
   };
