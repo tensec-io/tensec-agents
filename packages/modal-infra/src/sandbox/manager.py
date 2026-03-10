@@ -28,6 +28,7 @@ log = get_logger("manager")
 
 DEFAULT_SANDBOX_TIMEOUT_SECONDS = 7200  # 2 hours
 CODE_SERVER_PORT = 8080
+VNC_PORT = 6080
 
 
 @dataclass
@@ -61,6 +62,7 @@ class SandboxHandle:
     code_server_url: str | None = None
     code_server_password: str | None = None
     dev_server_url: str | None = None
+    vnc_url: str | None = None
 
     def get_logs(self) -> str:
         """Get sandbox logs."""
@@ -127,6 +129,19 @@ class SandboxManager:
             return tunnel.url
         except Exception as e:
             log.warn("dev_server.tunnel_error", sandbox_id=sandbox_id, port=port, exc=e)
+            return None
+
+    @staticmethod
+    async def _resolve_vnc_tunnel(sandbox: modal.Sandbox, sandbox_id: str) -> str | None:
+        """Resolve the VNC tunnel URL from Modal, returning None on failure."""
+        try:
+            loop = asyncio.get_event_loop()
+            tunnels = await loop.run_in_executor(None, sandbox.tunnels)
+            tunnel = tunnels[VNC_PORT]
+            log.info("vnc.tunnel", sandbox_id=sandbox_id, url=tunnel.url)
+            return tunnel.url
+        except Exception as e:
+            log.warn("vnc.tunnel_error", sandbox_id=sandbox_id, exc=e)
             return None
 
     @staticmethod
@@ -212,7 +227,7 @@ class SandboxManager:
         else:
             image = base_image
 
-        encrypted_ports = [CODE_SERVER_PORT]
+        encrypted_ports = [CODE_SERVER_PORT, VNC_PORT]
         if dev_server_port:
             encrypted_ports.append(dev_server_port)
 
@@ -234,6 +249,7 @@ class SandboxManager:
         # Get Modal's internal object ID for API calls (snapshot, etc.)
         modal_object_id = sandbox.object_id
         code_server_url = await self._resolve_code_server_tunnel(sandbox, sandbox_id)
+        vnc_url = await self._resolve_vnc_tunnel(sandbox, sandbox_id)
 
         dev_server_url: str | None = None
         if dev_server_port:
@@ -262,6 +278,7 @@ class SandboxManager:
             code_server_url=code_server_url,
             code_server_password=code_server_password,
             dev_server_url=dev_server_url,
+            vnc_url=vnc_url,
         )
 
     async def create_build_sandbox(
@@ -535,7 +552,7 @@ class SandboxManager:
             if port_str:
                 dev_server_port = int(port_str)
 
-        encrypted_ports = [CODE_SERVER_PORT]
+        encrypted_ports = [CODE_SERVER_PORT, VNC_PORT]
         if dev_server_port:
             encrypted_ports.append(dev_server_port)
 
@@ -555,6 +572,7 @@ class SandboxManager:
 
         modal_object_id = sandbox.object_id
         code_server_url = await self._resolve_code_server_tunnel(sandbox, sandbox_id)
+        vnc_url = await self._resolve_vnc_tunnel(sandbox, sandbox_id)
 
         dev_server_url: str | None = None
         if dev_server_port:
@@ -584,6 +602,7 @@ class SandboxManager:
             code_server_url=code_server_url,
             code_server_password=code_server_password,
             dev_server_url=dev_server_url,
+            vnc_url=vnc_url,
         )
 
     async def maintain_warm_pool(
