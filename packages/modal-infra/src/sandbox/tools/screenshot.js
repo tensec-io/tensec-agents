@@ -54,7 +54,7 @@ export default tool({
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
       })
       log("Browser launched")
-      const page = await browser.newPage({ viewport: { width: 1280, height: 720 } })
+      const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } })
 
       let networkIdleReached = true
       try {
