@@ -6,7 +6,8 @@ This image provides a complete development environment with:
 - Node.js 22 LTS, pnpm, Bun runtime
 - Python 3.12 with uv
 - OpenCode CLI pre-installed
-- Playwright with headless Chrome for visual verification
+- Playwright with headless Chromium for screenshot tool / LLM browser use
+- System Chromium for VNC desktop
 - Sandbox entrypoint and bridge code
 """
 
@@ -23,8 +24,8 @@ SANDBOX_DIR = Path(__file__).parent.parent / "sandbox"
 OPENCODE_VERSION = "latest"
 
 # Cache buster - change this to force Modal image rebuild
-# v45: add VNC stack (xvfb, x11vnc, websockify, noVNC, fluxbox) for live browser view
-CACHE_BUSTER = "v45-vnc-live-browser"
+# v46: add system chromium (apt) for VNC desktop; keep Playwright chromium for headless/LLM use
+CACHE_BUSTER = "v46-apt-chromium"
 
 # Base image with all development tools
 base_image = (
@@ -39,7 +40,7 @@ base_image = (
         "openssh-client",
         "jq",
         "unzip",  # Required for Bun installation
-        # For Playwright
+        # For Playwright headless Chromium
         "libnss3",
         "libnspr4",
         "libatk1.0-0",
@@ -116,12 +117,13 @@ base_image = (
         "websockify",  # VNC-to-WebSocket bridge for noVNC
         "novnc",       # Browser-based VNC client (served by websockify)
         "fluxbox",     # Minimal window manager
+        "chromium",    # System browser for VNC desktop
     )
     .run_commands(
         "mkdir -p /root/.fluxbox",
-        "echo 'session.screen0.toolbar.visible: false' > /root/.fluxbox/init",
+        "echo 'session.screen0.toolbar.visible: true' > /root/.fluxbox/init",
     )
-    # Install Playwright browsers (Chromium only to save space)
+    # Install Playwright browsers (Chromium only — used by screenshot tool and LLM browser)
     .run_commands(
         "playwright install chromium",
         "playwright install-deps chromium",
