@@ -10,6 +10,7 @@ import {
   MediaSection,
   CodeServerSection,
   TunnelUrlsSection,
+  VncSection,
 } from "./sidebar";
 import { ChildSessionsSection } from "./sidebar/child-sessions-section";
 import { TerminalIcon, LinkIcon } from "@/components/ui/icons";
@@ -132,6 +133,17 @@ export function SessionRightSidebarContent({
         <div className="px-4 py-4 border-b border-border-muted">
           <TunnelUrlsSection
             urls={sessionState.tunnelUrls}
+            sandboxStatus={sessionState.sandboxStatus}
+          />
+        </div>
+      )}
+
+      {/* VNC Browser View */}
+      {sessionState.vncUrl && (
+        <div className="px-4 py-4 border-b border-border-muted">
+          <VncSection
+            vncUrl={sessionState.vncUrl}
+            vncPassword={sessionState.vncPassword ?? null}
             sandboxStatus={sessionState.sandboxStatus}
           />
         </div>

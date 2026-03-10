@@ -110,6 +110,8 @@ export interface SandboxRow {
   tunnel_urls: string | null; // JSON mapping of port -> tunnel URL
   ttyd_url: string | null;
   ttyd_token: string | null;
+  vnc_url: string | null;
+  vnc_password: string | null;
   created_at: number;
 }
 

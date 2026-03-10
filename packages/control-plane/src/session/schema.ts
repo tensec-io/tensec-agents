@@ -109,6 +109,8 @@ CREATE TABLE IF NOT EXISTS sandbox (
   tunnel_urls TEXT,                                 -- JSON mapping of port -> tunnel URL for extra ports
   ttyd_url TEXT,                                    -- ttyd proxy tunnel URL
   ttyd_token TEXT,                                  -- Encrypted JWT token for ttyd auth
+  vnc_url TEXT,                                     -- VNC tunnel URL (always tunneled, on-demand start)
+  vnc_password TEXT,                                -- VNC password (generated on-demand when user enables VNC)
   created_at INTEGER NOT NULL
 );
 
@@ -382,6 +384,14 @@ export const MIGRATIONS: readonly SchemaMigration[] = [
     id: 30,
     description: "Add total_cost to session",
     run: `ALTER TABLE session ADD COLUMN total_cost REAL NOT NULL DEFAULT 0`,
+  },
+  {
+    id: 31,
+    description: "Add VNC fields to sandbox",
+    run: (sql) => {
+      runMigration(sql, `ALTER TABLE sandbox ADD COLUMN vnc_url TEXT`);
+      runMigration(sql, `ALTER TABLE sandbox ADD COLUMN vnc_password TEXT`);
+    },
   },
 ];
 

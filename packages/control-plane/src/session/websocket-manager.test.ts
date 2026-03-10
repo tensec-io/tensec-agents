@@ -169,6 +169,8 @@ function createSandboxRow(modalSandboxId: string): SandboxRow {
     tunnel_urls: null,
     ttyd_url: null,
     ttyd_token: null,
+    vnc_url: null,
+    vnc_password: null,
     created_at: Date.now(),
   };
 }

@@ -7,3 +7,4 @@ export { FilesChangedSection } from "./files-changed-section";
 export { MediaSection } from "./media-section";
 export { CodeServerSection } from "./code-server-section";
 export { TunnelUrlsSection } from "./tunnel-urls-section";
+export { VncSection } from "./vnc-section";

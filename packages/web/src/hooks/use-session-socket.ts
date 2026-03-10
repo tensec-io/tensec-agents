@@ -419,6 +419,18 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           setSessionState((prev) => (prev ? { ...prev, tunnelUrls: data.urls } : null));
           break;
 
+        case "vnc_info":
+          setSessionState((prev) =>
+            prev ? { ...prev, vncUrl: data.url, vncPassword: data.password } : null
+          );
+          break;
+
+        case "vnc_stopped":
+          setSessionState((prev) =>
+            prev ? { ...prev, vncPassword: null } : null
+          );
+          break;
+
         case "sandbox_ready":
           setSessionState((prev) => (prev ? { ...prev, sandboxStatus: "ready" } : null));
           break;

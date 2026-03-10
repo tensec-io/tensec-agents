@@ -81,6 +81,8 @@ function createMockSandbox(
     tunnel_urls: null,
     ttyd_url: null,
     ttyd_token: null,
+    vnc_url: null,
+    vnc_password: null,
     created_at: Date.now() - 60000,
     spawn_failure_count: 0,
     last_spawn_failure: 0,
@@ -200,6 +202,20 @@ function createMockStorage(
       if (sandbox) {
         sandbox.ttyd_url = null;
         sandbox.ttyd_token = null;
+      }
+    }),
+    updateSandboxVnc: vi.fn((url: string, password: string) => {
+      calls.push(`updateSandboxVnc:${url}`);
+      if (sandbox) {
+        sandbox.vnc_url = url;
+        sandbox.vnc_password = password;
+      }
+    }),
+    clearSandboxVnc: vi.fn(() => {
+      calls.push("clearSandboxVnc");
+      if (sandbox) {
+        sandbox.vnc_url = null;
+        sandbox.vnc_password = null;
       }
     }),
   };

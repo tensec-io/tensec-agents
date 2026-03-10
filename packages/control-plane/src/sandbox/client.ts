@@ -53,6 +53,7 @@ export interface CreateSandboxResponse {
   codeServerPassword?: string;
   ttydUrl?: string;
   tunnelUrls?: Record<string, string>;
+  vncUrl?: string;
 }
 
 export interface RestoreSandboxRequest {
@@ -82,6 +83,7 @@ export interface RestoreSandboxResponse {
   codeServerPassword?: string;
   ttydUrl?: string;
   tunnelUrls?: Record<string, string>;
+  vncUrl?: string;
 }
 
 export interface SnapshotSandboxRequest {
@@ -254,6 +256,7 @@ export class ModalClient {
         code_server_password?: string;
         ttyd_url?: string;
         tunnel_urls?: Record<string, string>;
+        vnc_url?: string;
       }>;
 
       if (!result.success || !result.data) {
@@ -270,6 +273,7 @@ export class ModalClient {
         codeServerPassword: result.data.code_server_password,
         ttydUrl: result.data.ttyd_url,
         tunnelUrls: result.data.tunnel_urls,
+        vncUrl: result.data.vnc_url,
       };
     } finally {
       log.info("modal.request", {
@@ -338,6 +342,7 @@ export class ModalClient {
         code_server_password?: string;
         ttyd_url?: string;
         tunnel_urls?: Record<string, string>;
+        vnc_url?: string;
       }>;
 
       if (!result.success) {
@@ -353,6 +358,7 @@ export class ModalClient {
         codeServerPassword: result.data?.code_server_password,
         ttydUrl: result.data?.ttyd_url,
         tunnelUrls: result.data?.tunnel_urls,
+        vncUrl: result.data?.vnc_url,
       };
     } finally {
       log.info("modal.request", {

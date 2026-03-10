@@ -196,6 +196,7 @@ async def api_create_sandbox(
                 "code_server_password": handle.code_server_password,
                 "ttyd_url": handle.ttyd_url,
                 "tunnel_urls": handle.tunnel_urls,
+                "vnc_url": handle.vnc_url,
             },
         }
     except Exception as e:
@@ -493,6 +494,7 @@ async def api_restore_sandbox(
                 "code_server_password": handle.code_server_password,
                 "ttyd_url": handle.ttyd_url,
                 "tunnel_urls": handle.tunnel_urls,
+                "vnc_url": handle.vnc_url,
             },
         }
     except HTTPException as e:

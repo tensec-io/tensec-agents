@@ -143,6 +143,18 @@ base_image = (
         "chmod +x /usr/local/bin/ttyd",
         "ttyd --version",
     )
+    # VNC dependencies for on-demand live browser view
+    .apt_install(
+        "xvfb",        # Virtual framebuffer
+        "x11vnc",      # VNC server
+        "websockify",  # VNC-to-WebSocket bridge for noVNC
+        "novnc",       # Browser-based VNC client (served by websockify)
+        "fluxbox",     # Minimal window manager
+    )
+    .run_commands(
+        "mkdir -p /root/.fluxbox",
+        "echo 'session.screen0.toolbar.visible: true' > /root/.fluxbox/init",
+    )
     # Install agent-browser CLI and download Chromium
     .run_commands(
         f"npm install -g agent-browser@{AGENT_BROWSER_VERSION}",

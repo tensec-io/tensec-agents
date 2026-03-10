@@ -31,6 +31,7 @@ log = get_logger("manager")
 
 DEFAULT_SANDBOX_TIMEOUT_SECONDS = 7200  # 2 hours
 MAX_TUNNEL_PORTS = 10
+VNC_PORT = 6080
 
 
 @dataclass
@@ -69,6 +70,7 @@ class SandboxHandle:
     code_server_password: str | None = None
     ttyd_url: str | None = None  # proxy tunnel URL (not ttyd directly)
     tunnel_urls: dict[int, str] | None = None  # port -> tunnel URL mapping for extra ports
+    vnc_url: str | None = None
 
     def get_logs(self) -> str:
         """Get sandbox logs."""
@@ -166,6 +168,9 @@ class SandboxManager:
         if terminal_enabled:
             exposed.append(TTYD_PROXY_PORT)
             reserved.add(TTYD_PROXY_PORT)
+        # Always expose VNC port (noVNC websockify)
+        exposed.append(VNC_PORT)
+        reserved.add(VNC_PORT)
 
         raw_ports = (settings or {}).get("tunnelPorts", [])
         tunnel_ports = SandboxManager._validate_ports(raw_ports) if raw_ports else []
@@ -181,25 +186,27 @@ class SandboxManager:
         code_server_enabled: bool,
         terminal_enabled: bool,
         extra_ports: list[int],
-    ) -> tuple[str | None, str | None, dict[int, str] | None]:
-        """Resolve all tunnels in a single pass. Returns (code_server_url, ttyd_url, extra_urls)."""
+    ) -> tuple[str | None, str | None, str | None, dict[int, str] | None]:
+        """Resolve all tunnels in a single pass. Returns (code_server_url, ttyd_url, vnc_url, extra_urls)."""
         all_ports: list[int] = []
         if code_server_enabled:
             all_ports.append(CODE_SERVER_PORT)
         if terminal_enabled:
             all_ports.append(TTYD_PROXY_PORT)
+        all_ports.append(VNC_PORT)
         all_ports.extend(extra_ports)
 
         if not all_ports:
-            return None, None, None
+            return None, None, None, None
 
         resolved = await SandboxManager._resolve_tunnels(sandbox, sandbox_id, all_ports)
 
         code_server_url = resolved.pop(CODE_SERVER_PORT, None)
         ttyd_url = resolved.pop(TTYD_PROXY_PORT, None)
+        vnc_url = resolved.pop(VNC_PORT, None)
         extra_urls = resolved if resolved else None
 
-        return code_server_url, ttyd_url, extra_urls
+        return code_server_url, ttyd_url, vnc_url, extra_urls
 
     @staticmethod
     def _inject_vcs_env_vars(env_vars: dict[str, str], clone_token: str | None) -> None:
@@ -311,7 +318,7 @@ class SandboxManager:
         )
 
         modal_object_id = sandbox.object_id
-        code_server_url, ttyd_url, extra_tunnel_urls = await self._resolve_and_setup_tunnels(
+        code_server_url, ttyd_url, vnc_url, extra_tunnel_urls = await self._resolve_and_setup_tunnels(
             sandbox, sandbox_id, config.code_server_enabled, terminal_enabled, tunnel_ports
         )
 
@@ -337,6 +344,7 @@ class SandboxManager:
             code_server_password=code_server_password,
             ttyd_url=ttyd_url,
             tunnel_urls=extra_tunnel_urls,
+            vnc_url=vnc_url,
         )
 
     async def create_build_sandbox(
@@ -623,7 +631,7 @@ class SandboxManager:
         )
 
         modal_object_id = sandbox.object_id
-        code_server_url, ttyd_url, extra_tunnel_urls = await self._resolve_and_setup_tunnels(
+        code_server_url, ttyd_url, vnc_url, extra_tunnel_urls = await self._resolve_and_setup_tunnels(
             sandbox, sandbox_id, code_server_enabled, terminal_enabled, tunnel_ports
         )
 
@@ -650,6 +658,7 @@ class SandboxManager:
             code_server_password=code_server_password,
             ttyd_url=ttyd_url,
             tunnel_urls=extra_tunnel_urls,
+            vnc_url=vnc_url,
         )
 
     async def maintain_warm_pool(

@@ -90,6 +90,7 @@ export class ModalSandboxProvider implements SandboxProvider {
         codeServerPassword: result.codeServerPassword,
         ttydUrl: result.ttydUrl,
         tunnelUrls: result.tunnelUrls,
+        vncUrl: result.vncUrl,
       };
     } catch (error) {
       throw this.classifyError("Failed to create sandbox", error);
@@ -131,6 +132,7 @@ export class ModalSandboxProvider implements SandboxProvider {
           codeServerPassword: result.codeServerPassword,
           ttydUrl: result.ttydUrl,
           tunnelUrls: result.tunnelUrls,
+          vncUrl: result.vncUrl,
         };
       }
 

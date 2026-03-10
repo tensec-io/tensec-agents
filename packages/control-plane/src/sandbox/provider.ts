@@ -91,6 +91,8 @@ export interface CreateSandboxResult {
   ttydUrl?: string;
   /** Tunnel URLs for extra ports (port -> URL mapping) */
   tunnelUrls?: Record<string, string>;
+  /** VNC tunnel URL (if available) */
+  vncUrl?: string;
 }
 
 /**
@@ -151,6 +153,8 @@ export interface RestoreResult {
   ttydUrl?: string;
   /** Tunnel URLs for extra ports (port -> URL mapping) */
   tunnelUrls?: Record<string, string>;
+  /** VNC tunnel URL (if available) */
+  vncUrl?: string;
 }
 
 /**
