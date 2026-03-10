@@ -45,11 +45,6 @@ export function VncSection({ vncUrl, vncPassword, sandboxStatus }: VncSectionPro
           <span className="text-muted-foreground truncate">Browser unavailable</span>
         )}
       </div>
-      {isVncRunning && (
-        <div className="ml-6 text-xs text-muted-foreground font-mono truncate">
-          Password: {vncPassword}
-        </div>
-      )}
     </div>
   );
 }
