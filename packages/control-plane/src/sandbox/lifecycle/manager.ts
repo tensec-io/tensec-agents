@@ -84,6 +84,10 @@ export interface SandboxStorage {
   updateSandboxCodeServer(url: string, password: string): void;
   /** Update dev server URL on the sandbox row */
   updateSandboxDevServer(url: string): void;
+  /** Update VNC URL and password on the sandbox row */
+  updateSandboxVnc(url: string, password: string): void;
+  /** Clear VNC URL and password from the sandbox row */
+  clearSandboxVnc(): void;
 }
 
 /**
@@ -403,6 +407,11 @@ export class SandboxLifecycleManager {
         this.storeAndBroadcastDevServer(result.devServerUrl);
       }
 
+      // Store VNC tunnel URL (VNC processes start on-demand, not at spawn)
+      if (result.vncUrl) {
+        this.storeAndBroadcastVnc(result.vncUrl);
+      }
+
       this.storage.updateSandboxStatus("connecting");
       this.broadcaster.broadcast({ type: "sandbox_status", status: "connecting" });
 
@@ -527,6 +536,11 @@ export class SandboxLifecycleManager {
         // Store dev server details and push to connected clients
         if (result.devServerUrl) {
           this.storeAndBroadcastDevServer(result.devServerUrl);
+        }
+
+        // Store VNC tunnel URL (VNC processes start on-demand, not at spawn)
+        if (result.vncUrl) {
+          this.storeAndBroadcastVnc(result.vncUrl);
         }
 
         this.storage.updateSandboxStatus("connecting");
@@ -846,6 +860,15 @@ export class SandboxLifecycleManager {
       type: "dev_server_info",
       url,
     });
+  }
+
+  /**
+   * Store VNC tunnel URL in the database (no password yet — VNC starts on-demand).
+   * Shared by doSpawn() and restoreFromSnapshot().
+   */
+  private storeAndBroadcastVnc(url: string): void {
+    // Store URL only; password is set later when VNC is actually enabled
+    this.storage.updateSandboxVnc(url, "");
   }
 
   /**

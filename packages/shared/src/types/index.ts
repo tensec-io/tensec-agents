@@ -276,7 +276,9 @@ export type ClientMessage =
   | { type: "stop" }
   | { type: "typing" }
   | { type: "presence"; status: "active" | "idle"; cursor?: { line: number; file: string } }
-  | { type: "fetch_history"; cursor: { timestamp: number; id: string }; limit?: number };
+  | { type: "fetch_history"; cursor: { timestamp: number; id: string }; limit?: number }
+  | { type: "enable_vnc" }
+  | { type: "disable_vnc" };
 
 export type ServerMessage =
   | { type: "pong"; timestamp: number }
@@ -335,6 +337,8 @@ export type ServerMessage =
     }
   | { type: "code_server_info"; url: string; password: string }
   | { type: "dev_server_info"; url: string }
+  | { type: "vnc_info"; url: string; password: string }
+  | { type: "vnc_stopped" }
   | { type: "error"; code: string; message: string };
 
 // Session state sent to clients
@@ -356,6 +360,8 @@ export interface SessionState {
   codeServerUrl?: string | null;
   codeServerPassword?: string | null;
   devServerUrl?: string | null;
+  vncUrl?: string | null;
+  vncPassword?: string | null;
 }
 
 // Participant presence info

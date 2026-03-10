@@ -9,6 +9,7 @@ import {
   FilesChangedSection,
   CodeServerSection,
   DevServerSection,
+  VncSection,
 } from "./sidebar";
 import { ChildSessionsSection } from "./sidebar/child-sessions-section";
 import { extractLatestTasks } from "@/lib/tasks";
@@ -21,6 +22,7 @@ interface SessionRightSidebarProps {
   participants: ParticipantPresence[];
   events: SandboxEvent[];
   artifacts: Artifact[];
+  onVncToggle?: (enable: boolean) => void;
 }
 
 export type SessionRightSidebarContentProps = SessionRightSidebarProps;
@@ -30,6 +32,7 @@ export function SessionRightSidebarContent({
   participants,
   events,
   artifacts,
+  onVncToggle,
 }: SessionRightSidebarContentProps) {
   const tasks = useMemo(() => extractLatestTasks(events), [events]);
   const filesChanged = useMemo(() => extractChangedFiles(events), [events]);
@@ -89,6 +92,18 @@ export function SessionRightSidebarContent({
         </div>
       )}
 
+      {/* VNC Browser View */}
+      {sessionState.vncUrl && onVncToggle && (
+        <div className="px-4 py-4 border-b border-border-muted">
+          <VncSection
+            vncUrl={sessionState.vncUrl}
+            vncPassword={sessionState.vncPassword ?? null}
+            sandboxStatus={sessionState.sandboxStatus}
+            onToggle={onVncToggle}
+          />
+        </div>
+      )}
+
       {/* Tasks */}
       {tasks.length > 0 && (
         <CollapsibleSection title="Tasks" defaultOpen={true}>
@@ -123,6 +138,7 @@ export function SessionRightSidebar({
   participants,
   events,
   artifacts,
+  onVncToggle,
 }: SessionRightSidebarProps) {
   return (
     <aside className="w-80 border-l border-border-muted overflow-y-auto hidden lg:block">
@@ -131,6 +147,7 @@ export function SessionRightSidebar({
         participants={participants}
         events={events}
         artifacts={artifacts}
+        onVncToggle={onVncToggle}
       />
     </aside>
   );

@@ -109,6 +109,18 @@ base_image = (
         "curl -fsSL https://code-server.dev/install.sh | sh",
         "code-server --version",
     )
+    # VNC dependencies for on-demand live browser view
+    .apt_install(
+        "xvfb",        # Virtual framebuffer
+        "x11vnc",      # VNC server
+        "websockify",  # VNC-to-WebSocket bridge for noVNC
+        "novnc",       # Browser-based VNC client (served by websockify)
+        "fluxbox",     # Minimal window manager
+    )
+    .run_commands(
+        "mkdir -p /root/.fluxbox",
+        "echo 'session.screen0.toolbar.visible: false' > /root/.fluxbox/init",
+    )
     # Install Playwright browsers (Chromium only to save space)
     .run_commands(
         "playwright install chromium",
