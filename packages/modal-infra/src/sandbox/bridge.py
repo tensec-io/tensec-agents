@@ -157,7 +157,7 @@ class AgentBridge:
     VNC_DISPLAY: ClassVar[str] = ":1"
     VNC_RFB_PORT: ClassVar[str] = "5900"
     VNC_WS_PORT: ClassVar[str] = "6080"
-    VNC_RESOLUTION: ClassVar[str] = "1280x720x24"
+    VNC_RESOLUTION: ClassVar[str] = "1920x1080x24"
     NOVNC_WEB_DIR: ClassVar[str] = "/usr/share/novnc/"
 
     def __init__(
