@@ -192,7 +192,6 @@ function SessionPageContent() {
     sendPrompt,
     stopExecution,
     sendTyping,
-    sendVncToggle,
     reconnect,
     loadOlderEvents,
   } = useSessionSocket(sessionId);
@@ -406,7 +405,6 @@ function SessionPageContent() {
       setSelectedModel={handleModelChange}
       setReasoningEffort={setReasoningEffort}
       stopExecution={stopExecution}
-      sendVncToggle={sendVncToggle}
       handleArchive={handleArchive}
       handleUnarchive={handleUnarchive}
       loadingHistory={loadingHistory}
@@ -451,7 +449,6 @@ function SessionContent({
   setSelectedModel,
   setReasoningEffort,
   stopExecution,
-  sendVncToggle,
   handleArchive,
   handleUnarchive,
   loadingHistory,
@@ -492,7 +489,6 @@ function SessionContent({
   setSelectedModel: (model: string) => void;
   setReasoningEffort: (value: string | undefined) => void;
   stopExecution: () => void;
-  sendVncToggle: (enable: boolean) => void;
   handleArchive: () => void | Promise<void>;
   handleUnarchive: () => void | Promise<void>;
   loadingHistory: boolean;
@@ -765,7 +761,7 @@ function SessionContent({
           participants={participants}
           events={events}
           artifacts={artifacts}
-          onVncToggle={sendVncToggle}
+
         />
       </main>
 
@@ -817,7 +813,7 @@ function SessionContent({
                   participants={participants}
                   events={events}
                   artifacts={artifacts}
-                  onVncToggle={sendVncToggle}
+        
                 />
               </div>
             </div>
@@ -846,7 +842,7 @@ function SessionContent({
                   participants={participants}
                   events={events}
                   artifacts={artifacts}
-                  onVncToggle={sendVncToggle}
+        
                 />
               </div>
             </div>

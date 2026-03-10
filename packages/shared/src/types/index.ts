@@ -276,9 +276,7 @@ export type ClientMessage =
   | { type: "stop" }
   | { type: "typing" }
   | { type: "presence"; status: "active" | "idle"; cursor?: { line: number; file: string } }
-  | { type: "fetch_history"; cursor: { timestamp: number; id: string }; limit?: number }
-  | { type: "enable_vnc" }
-  | { type: "disable_vnc" };
+  | { type: "fetch_history"; cursor: { timestamp: number; id: string }; limit?: number };
 
 export type ServerMessage =
   | { type: "pong"; timestamp: number }

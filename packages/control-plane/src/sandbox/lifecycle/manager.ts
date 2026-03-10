@@ -407,9 +407,9 @@ export class SandboxLifecycleManager {
         this.storeAndBroadcastDevServer(result.devServerUrl);
       }
 
-      // Store VNC tunnel URL (VNC processes start on-demand, not at spawn)
+      // Store VNC tunnel URL (password comes later from bridge via vnc_info)
       if (result.vncUrl) {
-        this.storeAndBroadcastVnc(result.vncUrl);
+        this.storage.updateSandboxVnc(result.vncUrl, "");
       }
 
       this.storage.updateSandboxStatus("connecting");
@@ -538,9 +538,9 @@ export class SandboxLifecycleManager {
           this.storeAndBroadcastDevServer(result.devServerUrl);
         }
 
-        // Store VNC tunnel URL (VNC processes start on-demand, not at spawn)
+        // Store VNC tunnel URL (password comes later from bridge via vnc_info)
         if (result.vncUrl) {
-          this.storeAndBroadcastVnc(result.vncUrl);
+          this.storage.updateSandboxVnc(result.vncUrl, "");
         }
 
         this.storage.updateSandboxStatus("connecting");
@@ -859,20 +859,6 @@ export class SandboxLifecycleManager {
     this.broadcaster.broadcast({
       type: "dev_server_info",
       url,
-    });
-  }
-
-  /**
-   * Store VNC tunnel URL in the database (no password yet — VNC starts on-demand).
-   * Shared by doSpawn() and restoreFromSnapshot().
-   */
-  private storeAndBroadcastVnc(url: string): void {
-    // Store URL only; password is set later when VNC is actually enabled
-    this.storage.updateSandboxVnc(url, "");
-    this.broadcaster.broadcast({
-      type: "vnc_info",
-      url,
-      password: "",
     });
   }
 

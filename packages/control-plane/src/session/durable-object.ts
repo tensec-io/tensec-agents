@@ -1023,10 +1023,6 @@ export class SessionDO extends DurableObject<Env> {
           this.presenceService.updatePresence(ws, data);
           break;
 
-        case "enable_vnc":
-        case "disable_vnc":
-          this.handleVncToggle(data.type);
-          break;
       }
     } catch (e) {
       this.log.error("Error processing client message", {
@@ -1615,19 +1611,6 @@ export class SessionDO extends DurableObject<Env> {
     }
 
     return false;
-  }
-
-  /**
-   * Forward VNC enable/disable command to the sandbox bridge.
-   */
-  private handleVncToggle(type: "enable_vnc" | "disable_vnc"): void {
-    const sandboxWs = this.wsManager.getSandboxSocket();
-    if (!sandboxWs) {
-      this.log.warn("Cannot toggle VNC: no sandbox connected", { type });
-      return;
-    }
-    this.wsManager.send(sandboxWs, { type });
-    this.log.info("VNC toggle forwarded to sandbox", { type });
   }
 
   private updateSandboxStatus(status: string): void {

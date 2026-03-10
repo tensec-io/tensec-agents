@@ -50,7 +50,6 @@ interface UseSessionSocketReturn {
   sendPrompt: (content: string, model?: string, reasoningEffort?: string, attachments?: Attachment[]) => void;
   stopExecution: () => void;
   sendTyping: () => void;
-  sendVncToggle: (enable: boolean) => void;
   reconnect: () => void;
   loadOlderEvents: () => void;
 }
@@ -615,13 +614,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     wsRef.current.send(JSON.stringify({ type: "typing" }));
   }, []);
 
-  const sendVncToggle = useCallback((enable: boolean) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      return;
-    }
-    wsRef.current.send(JSON.stringify({ type: enable ? "enable_vnc" : "disable_vnc" }));
-  }, []);
-
   const loadOlderEvents = useCallback(() => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     if (!hasMoreHistory || loadingHistory || !cursorRef.current) return;
@@ -698,7 +690,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
     sendPrompt,
     stopExecution,
     sendTyping,
-    sendVncToggle,
     reconnect,
     loadOlderEvents,
   };
