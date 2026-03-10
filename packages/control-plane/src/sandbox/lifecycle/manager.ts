@@ -869,6 +869,11 @@ export class SandboxLifecycleManager {
   private storeAndBroadcastVnc(url: string): void {
     // Store URL only; password is set later when VNC is actually enabled
     this.storage.updateSandboxVnc(url, "");
+    this.broadcaster.broadcast({
+      type: "vnc_info",
+      url,
+      password: "",
+    });
   }
 
   /**
