@@ -407,9 +407,10 @@ export class SandboxLifecycleManager {
         this.storeAndBroadcastDevServer(result.devServerUrl);
       }
 
-      // Store VNC tunnel URL (password comes later from bridge via vnc_info)
+      // Store and broadcast VNC tunnel URL (password comes later from bridge via vnc_info)
       if (result.vncUrl) {
         this.storage.updateSandboxVnc(result.vncUrl, "");
+        this.broadcaster.broadcast({ type: "vnc_info", url: result.vncUrl, password: "" });
       }
 
       this.storage.updateSandboxStatus("connecting");
@@ -538,9 +539,10 @@ export class SandboxLifecycleManager {
           this.storeAndBroadcastDevServer(result.devServerUrl);
         }
 
-        // Store VNC tunnel URL (password comes later from bridge via vnc_info)
+        // Store and broadcast VNC tunnel URL (password comes later from bridge via vnc_info)
         if (result.vncUrl) {
           this.storage.updateSandboxVnc(result.vncUrl, "");
+          this.broadcaster.broadcast({ type: "vnc_info", url: result.vncUrl, password: "" });
         }
 
         this.storage.updateSandboxStatus("connecting");

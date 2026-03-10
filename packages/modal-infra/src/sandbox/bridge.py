@@ -1586,8 +1586,8 @@ class AgentBridge:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _find_chromium_binary() -> str:
-        """Find a usable Chromium binary (Playwright's, then system)."""
+    def _find_chromium_binary() -> str | None:
+        """Find a usable Chromium binary (Playwright's, then system). Returns None if not found."""
         import glob as glob_mod
 
         # Prefer Playwright's Chromium (already installed for screenshot tool)
@@ -1601,7 +1601,7 @@ class AgentBridge:
             found = shutil.which(name)
             if found:
                 return found
-        return "chromium"
+        return None
 
     async def _handle_enable_vnc(self) -> None:
         """Start the VNC process chain (Xvfb → fluxbox → Chromium → x11vnc → websockify)."""
@@ -1638,24 +1638,27 @@ class AgentBridge:
             self._vnc_processes.append(fluxbox)
             await asyncio.sleep(0.3)
 
-            # 3. Chromium — non-headless browser
+            # 3. Chromium — non-headless browser (optional)
             chromium_bin = self._find_chromium_binary()
-            start_url = "about:blank"
-            dev_port = os.environ.get("DEV_SERVER_PORT")
-            if dev_port:
-                start_url = f"http://localhost:{dev_port}"
+            if chromium_bin:
+                start_url = "about:blank"
+                dev_port = os.environ.get("DEV_SERVER_PORT")
+                if dev_port:
+                    start_url = f"http://localhost:{dev_port}"
 
-            chromium = await asyncio.create_subprocess_exec(
-                chromium_bin,
-                "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
-                "--start-maximized", "--no-first-run",
-                "--disable-background-networking", "--disable-sync",
-                start_url,
-                env=vnc_env,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            self._vnc_processes.append(chromium)
+                chromium = await asyncio.create_subprocess_exec(
+                    chromium_bin,
+                    "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+                    "--start-maximized", "--no-first-run",
+                    "--disable-background-networking", "--disable-sync",
+                    start_url,
+                    env=vnc_env,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                self._vnc_processes.append(chromium)
+            else:
+                self.log.info("vnc.chromium_not_found")
 
             # 4. x11vnc — VNC server
             x11vnc = await asyncio.create_subprocess_exec(
