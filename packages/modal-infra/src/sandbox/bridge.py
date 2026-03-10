@@ -370,7 +370,10 @@ class AgentBridge:
                 await self._flush_pending_acks(skip_ack_ids=just_flushed)
 
                 # Auto-start VNC if ENABLE_VNC env var is truthy
+                vnc_env_val = os.environ.get("ENABLE_VNC", "")
+                self.log.info("vnc.autostart_check", enable_vnc=vnc_env_val, vnc_active=self._vnc_active)
                 if self._is_vnc_enabled() and not self._vnc_active:
+                    self.log.info("vnc.autostart_triggered")
                     asyncio.create_task(self._handle_enable_vnc())
 
                 heartbeat_task = asyncio.create_task(self._heartbeat_loop())
