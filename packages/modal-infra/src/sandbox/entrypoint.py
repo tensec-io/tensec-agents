@@ -412,6 +412,9 @@ class SandboxSupervisor:
             shutil.copy(plugin_source, plugin_dir / "codex-auth-plugin.ts")
             self.log.info("openai_oauth.plugin_deployed")
 
+        # Map SENTRY_API_TOKEN → SENTRY_AUTH_TOKEN so the Sentry CLI picks it up
+        sentry_token = os.environ.get("SENTRY_API_TOKEN", "")
+
         env = {
             **os.environ,
             "OPENCODE_CONFIG_CONTENT": json.dumps(opencode_config),
@@ -421,6 +424,7 @@ class SandboxSupervisor:
             # this, the session hangs until the SSE inactivity timeout (120s).
             # See: https://github.com/anomalyco/opencode/blob/19b1222cd/packages/opencode/src/tool/registry.ts#L100
             "OPENCODE_CLIENT": "serve",
+            **({"SENTRY_AUTH_TOKEN": sentry_token} if sentry_token else {}),
         }
 
         # Start OpenCode server in the repo directory

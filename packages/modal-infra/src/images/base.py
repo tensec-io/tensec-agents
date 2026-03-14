@@ -17,6 +17,7 @@ import modal
 
 # Get the path to the sandbox code
 SANDBOX_DIR = Path(__file__).parent.parent / "sandbox"
+SKILLS_DIR = SANDBOX_DIR / "skills"
 
 # Plugin is now bundled with sandbox code at /app/sandbox/inspect-plugin.js
 
@@ -25,7 +26,7 @@ OPENCODE_VERSION = "latest"
 
 # Cache buster - change this to force Modal image rebuild
 # v46: add system chromium (apt) for VNC desktop; keep Playwright chromium for headless/LLM use
-CACHE_BUSTER = "v46-apt-chromium"
+CACHE_BUSTER = "v48-sentry-datadog-skills"
 
 # Base image with all development tools
 base_image = (
@@ -103,7 +104,11 @@ base_image = (
         # Install @opencode-ai/plugin globally for custom tools
         # This ensures tools can import the plugin without needing to run bun add
         "npm install -g @opencode-ai/plugin@latest zod",
+        # Install Sentry CLI (new `sentry` command, not legacy sentry-cli)
+        "curl https://cli.sentry.dev/install -fsS | bash",
         "npm install -g playwright",
+        # Install Datadog pup CLI (Linux x86_64)
+        "curl -L https://github.com/datadog-labs/pup/releases/download/v0.31.0/pup_0.31.0_Linux_x86_64.tar.gz | tar xz -C /usr/local/bin",
     )
     # Install code-server for browser-based VS Code editing
     .run_commands(
@@ -141,7 +146,7 @@ base_image = (
             "HOME": "/root",
             "NODE_ENV": "development",
             "PNPM_HOME": "/root/.local/share/pnpm",
-            "PATH": "/root/.bun/bin:/root/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin",
+            "PATH": "/root/.sentry/bin:/root/.bun/bin:/root/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin",
             "PLAYWRIGHT_BROWSERS_PATH": "/root/.cache/ms-playwright",
             "PYTHONPATH": "/app",
             "SANDBOX_VERSION": CACHE_BUSTER,
@@ -153,6 +158,11 @@ base_image = (
     .add_local_dir(
         str(SANDBOX_DIR),
         remote_path="/app/sandbox",
+    )
+    # Add global OpenCode skills (available to all repositories)
+    .add_local_dir(
+        str(SKILLS_DIR),
+        remote_path="/root/.config/opencode/skills",
     )
 )
 
