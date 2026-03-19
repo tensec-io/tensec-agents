@@ -71,6 +71,12 @@ function isServiceBinding(value: unknown): value is ServiceBinding {
  * Returns null when not running on Cloudflare Workers.
  */
 async function getServiceBinding(): Promise<ServiceBinding | null> {
+  // In local development, always use URL-based fetch — the service binding
+  // resolves to a local wrangler proxy that won't be running.
+  if (process.env.NODE_ENV === "development") {
+    return null;
+  }
+
   try {
     const { getCloudflareContext } = await import("@opennextjs/cloudflare");
     const ctx = await getCloudflareContext({ async: true });
