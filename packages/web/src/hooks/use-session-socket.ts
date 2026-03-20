@@ -425,12 +425,6 @@ export function useSessionSocket(sessionId: string): UseSessionSocketReturn {
           );
           break;
 
-        case "vnc_stopped":
-          setSessionState((prev) =>
-            prev ? { ...prev, vncPassword: null } : null
-          );
-          break;
-
         case "sandbox_ready":
           setSessionState((prev) => (prev ? { ...prev, sandboxStatus: "ready" } : null));
           break;

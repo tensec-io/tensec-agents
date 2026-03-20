@@ -1074,17 +1074,6 @@ export class SessionDO extends DurableObject<Env> {
         }
         return;
       }
-      if (parsed.type === "vnc_stopped") {
-        // Keep tunnel URL but clear password (VNC can be re-enabled)
-        const sandbox = this.getSandbox();
-        if (sandbox?.vnc_url) {
-          this.repository.updateSandboxVnc(sandbox.vnc_url, "");
-        }
-        this.broadcast({ type: "vnc_stopped" });
-        this.log.info("VNC disabled");
-        return;
-      }
-
       await this.processSandboxEvent(parsed as SandboxEvent);
     } catch (e) {
       this.log.error("Error processing sandbox message", {

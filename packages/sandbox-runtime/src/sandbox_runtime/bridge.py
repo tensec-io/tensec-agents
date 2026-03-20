@@ -212,8 +212,7 @@ class AgentBridge:
         # Tracks the message ID of the currently executing prompt
         self._inflight_message_id: str | None = None
 
-        # VNC process tracking
-        self._vnc_processes: list[asyncio.subprocess.Process] = []
+        # VNC state
         self._vnc_password: str | None = None
         self._vnc_active = False
         self._vnc_starting = False
@@ -310,9 +309,6 @@ class AgentBridge:
                 self._current_prompt_task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):
                     await self._current_prompt_task
-            # Clean up VNC processes
-            if self._vnc_active:
-                await self._kill_vnc_processes()
             if self.http_client:
                 await self.http_client.aclose()
 
@@ -373,7 +369,7 @@ class AgentBridge:
                 # Always auto-start VNC
                 if not self._vnc_active:
                     self.log.info("vnc.autostart_triggered")
-                    asyncio.create_task(self._handle_enable_vnc())
+                    asyncio.create_task(self._start_vnc())
 
                 heartbeat_task = asyncio.create_task(self._heartbeat_loop())
                 background_tasks: set[asyncio.Task[None]] = set()
@@ -604,10 +600,6 @@ class AgentBridge:
             self.git_sync_complete.set()
         elif cmd_type == "push":
             await self._handle_push(cmd)
-        elif cmd_type == "enable_vnc":
-            asyncio.create_task(self._handle_enable_vnc())
-        elif cmd_type == "disable_vnc":
-            asyncio.create_task(self._handle_disable_vnc())
         elif cmd_type == "ack":
             ack_id = cmd.get("ackId")
             if ack_id and ack_id in self._pending_acks:
@@ -1488,7 +1480,7 @@ class AgentBridge:
     # VNC lifecycle
     # ------------------------------------------------------------------
 
-    async def _handle_enable_vnc(self) -> None:
+    async def _start_vnc(self) -> None:
         """Start the VNC process chain (Xvfb → fluxbox → x11vnc → websockify)."""
         if self._vnc_active or self._vnc_starting:
             # Re-send vnc_info in case the client missed it
@@ -1498,8 +1490,25 @@ class AgentBridge:
 
         self._vnc_starting = True
         try:
-            # Kill any orphaned VNC processes from a previous bridge run
-            await self._kill_vnc_processes()
+            # Clean up stale X11 lock files (left over from snapshot restores)
+            display_num = self.VNC_DISPLAY.lstrip(":")
+            for stale_path in [f"/tmp/.X{display_num}-lock", f"/tmp/.X11-unix/X{display_num}"]:
+                try:
+                    os.unlink(stale_path)
+                except FileNotFoundError:
+                    pass
+
+            # Kill any orphaned VNC processes from a previous sandbox run
+            for pattern in ["websockify.*6080", "x11vnc", f"Xvfb.*:{display_num}", "fluxbox"]:
+                try:
+                    p = await asyncio.create_subprocess_exec(
+                        "pkill", "-f", pattern,
+                        stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
+                    )
+                    await p.wait()
+                except Exception:
+                    pass
 
             password = secrets.token_urlsafe(16)
             vnc_env = {**os.environ, "DISPLAY": self.VNC_DISPLAY}
@@ -1510,7 +1519,6 @@ class AgentBridge:
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
-            self._vnc_processes.append(xvfb)
             await asyncio.sleep(0.5)
 
             # 2. fluxbox — minimal window manager
@@ -1520,7 +1528,6 @@ class AgentBridge:
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
-            self._vnc_processes.append(fluxbox)
             await asyncio.sleep(0.3)
 
             # 3. x11vnc — VNC server
@@ -1533,7 +1540,6 @@ class AgentBridge:
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
-            self._vnc_processes.append(x11vnc)
             await asyncio.sleep(0.3)
 
             # 4. websockify — VNC-to-WebSocket bridge, also serves noVNC web client
@@ -1544,63 +1550,17 @@ class AgentBridge:
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
-            self._vnc_processes.append(websockify)
 
             self._vnc_password = password
             self._vnc_active = True
-            self.log.info("vnc.started")
+            self.log.info("vnc.started!")
 
             await self._send_event({"type": "vnc_info", "password": password})
 
         except Exception as e:
             self.log.error("vnc.start_error", exc=e)
-            await self._kill_vnc_processes()
-            await self._send_event({"type": "vnc_stopped", "error": str(e)})
         finally:
             self._vnc_starting = False
-
-    async def _handle_disable_vnc(self) -> None:
-        """Stop the VNC process chain and free resources."""
-        if not self._vnc_active:
-            return
-
-        self.log.info("vnc.stop")
-        await self._kill_vnc_processes()
-        self._vnc_active = False
-        self._vnc_password = None
-        self.log.info("vnc.stopped")
-
-        await self._send_event({"type": "vnc_stopped"})
-
-    async def _kill_vnc_processes(self) -> None:
-        """Terminate all tracked VNC processes, then kill any orphans."""
-        # Terminate tracked processes in reverse order (websockify first, Xvfb last)
-        for proc in reversed(self._vnc_processes):
-            if proc.returncode is None:
-                with contextlib.suppress(ProcessLookupError):
-                    proc.terminate()
-
-        for proc in self._vnc_processes:
-            if proc.returncode is None:
-                try:
-                    await asyncio.wait_for(proc.wait(), timeout=3.0)
-                except (TimeoutError, ProcessLookupError):
-                    with contextlib.suppress(ProcessLookupError):
-                        proc.kill()
-
-        self._vnc_processes.clear()
-
-        # Kill any orphaned VNC-related processes (e.g., from a previous bridge run)
-        for pattern in ["websockify.*6080", "x11vnc", "Xvfb.*:1", "fluxbox"]:
-            try:
-                p = await asyncio.create_subprocess_exec(
-                    "pkill", "-f", pattern,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL,
-                )
-                await p.wait()
-            except Exception:
-                pass
 
     async def _handle_push(self, cmd: dict[str, Any]) -> None:
         """Handle push command using provider-generated push spec."""
