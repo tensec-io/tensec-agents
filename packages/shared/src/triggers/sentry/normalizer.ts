@@ -10,7 +10,7 @@ import { buildSentryContextBlock } from "./context";
 interface SentryIssueAlertPayload {
   action: string;
   data: {
-    event: {
+    event?: {
       event_id: string;
       title: string;
       culprit: string;
@@ -95,7 +95,7 @@ export function normalizeSentryEvent(
       concurrencyKey,
       sentryProject: issue.project.slug,
       sentryLevel: issue.level,
-      culpritFile: p.data.event.metadata.filename,
+      culpritFile: p.data.event?.metadata.filename,
       contextBlock: buildSentryContextBlock(p as unknown as Record<string, unknown>),
       meta: {
         issueId: issue.id,
@@ -135,7 +135,7 @@ export function normalizeSentryEvent(
 
 function isIssueAlertPayload(payload: Record<string, unknown>): boolean {
   const data = payload.data as Record<string, unknown> | undefined;
-  return !!data && "issue" in data && "event" in data;
+  return !!data && "issue" in data;
 }
 
 function isMetricAlertPayload(payload: Record<string, unknown>): boolean {

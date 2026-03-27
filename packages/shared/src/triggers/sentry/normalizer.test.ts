@@ -130,6 +130,21 @@ describe("normalizeSentryEvent", () => {
     expect(normalizeSentryEvent(warningPayload)).toBeNull();
   });
 
+  it("normalizes an issue payload without data.event", () => {
+    const { data: { event: _event, ...dataWithoutEvent }, ...rest } = issueAlertPayload;
+    const payload = { ...rest, data: dataWithoutEvent };
+    const result = normalizeSentryEvent(payload);
+    expect(result).not.toBeNull();
+    expect(result!.source).toBe("sentry");
+    expect(result!.eventType).toBe("issue.created");
+    expect(result!.triggerKey).toBe("sentry_issue:12345");
+    expect(result!.sentryProject).toBe("acme-backend");
+    expect(result!.sentryLevel).toBe("error");
+    expect(result!.culpritFile).toBeUndefined();
+    expect(result!.contextBlock).toContain("acme-backend");
+    expect(result!.contextBlock).not.toContain("Stack trace");
+  });
+
   it("returns null for unrecognized payload shapes", () => {
     expect(normalizeSentryEvent({ action: "unknown" })).toBeNull();
     expect(normalizeSentryEvent({})).toBeNull();
