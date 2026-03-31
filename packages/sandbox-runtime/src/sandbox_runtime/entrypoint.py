@@ -49,7 +49,6 @@ class SandboxSupervisor:
     START_SCRIPT_PATH = ".openinspect/start.sh"
     DEFAULT_SETUP_TIMEOUT_SECONDS = 300
     DEFAULT_START_TIMEOUT_SECONDS = 120
-    CLONE_DEPTH_COMMITS = 100
     SIDECAR_TIMEOUT_SECONDS = 5
     MCP_PACKAGE_INSTALL_TIMEOUT_SECONDS = 180
 
@@ -133,8 +132,6 @@ class SandboxSupervisor:
         result = await asyncio.create_subprocess_exec(
             "git",
             "clone",
-            "--depth",
-            str(self.CLONE_DEPTH_COMMITS),
             "--branch",
             self.base_branch,
             self._build_repo_url(),
