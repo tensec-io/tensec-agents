@@ -448,7 +448,7 @@ def _should_rebuild(
 
 @app.function(
     image=function_image,
-    schedule=modal.Cron("*/30 * * * *"),
+    schedule=modal.Cron("0 0-4,12-23 * * *"),
     secrets=[internal_api_secret, github_app_secrets],
     timeout=300,  # 5 min — scheduler itself is fast, builds run async
 )

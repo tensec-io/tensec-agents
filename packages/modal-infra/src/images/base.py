@@ -33,8 +33,8 @@ TTYD_VERSION = "1.7.7"
 TTYD_SHA256 = "8a217c968aba172e0dbf3f34447218dc015bc4d5e59bf51db2f2cd12b7be4f55"
 
 # Cache buster - change this to force Modal image rebuild
-# v49: full clone + VNC snapshot fix
-CACHE_BUSTER = "v49-full-clone-vnc-fix"
+# v50: full clone + VNC snapshot fix + hourly build schedule
+CACHE_BUSTER = "v50-full-clone-vnc-hourly"
 
 # Base image with all development tools
 base_image = (
