@@ -41,7 +41,11 @@ module "control_plane_worker" {
     {
       binding_name = "MEDIA_BUCKET"
       bucket_name  = cloudflare_r2_bucket.media.name
-    }
+    },
+    {
+      binding_name = "ATTACHMENTS"
+      bucket_name  = cloudflare_r2_bucket.session_attachments.name
+    },
   ]
 
   service_bindings = concat(
@@ -99,13 +103,6 @@ module "control_plane_worker" {
       { name = "DAYTONA_API_KEY", value = var.daytona_api_key },
     ] : []
   )
-
-  r2_buckets = [
-    {
-      binding_name = "ATTACHMENTS"
-      bucket_name  = cloudflare_r2_bucket.session_attachments.name
-    }
-  ]
 
   durable_objects = [
     { binding_name = "SESSION", class_name = "SessionDO" },
