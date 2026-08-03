@@ -69,8 +69,6 @@ class RepositorySyncResult:
 
 
 class RepositorySynchronizer:
-    CLONE_DEPTH_COMMITS = 100
-
     def __init__(
         self,
         vcs_host: str,
@@ -104,8 +102,6 @@ class RepositorySynchronizer:
             result = await asyncio.create_subprocess_exec(
                 "git",
                 "clone",
-                "--depth",
-                str(self.CLONE_DEPTH_COMMITS),
                 "--branch",
                 repo.branch,
                 self._build_repo_url(repo),
