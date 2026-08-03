@@ -433,7 +433,7 @@ describe("model utilities", () => {
     expect(getDefaultReasoningEffort("anthropic/claude-sonnet-4-6")).toBe("high");
     expect(getDefaultReasoningEffort("anthropic/claude-opus-4-8")).toBe("high");
     expect(getDefaultReasoningEffort("anthropic/claude-sonnet-5")).toBe("high");
-    expect(getDefaultReasoningEffort("anthropic/claude-sonnet-5-5")).toBe("high");
+    expect(getDefaultReasoningEffort("anthropic/claude-sonnet-5-5")).toBe("medium");
     expect(getDefaultReasoningEffort("anthropic/claude-opus-5")).toBe("high");
     expect(getDefaultReasoningEffort("anthropic/claude-opus-5-5")).toBe("high");
     expect(getDefaultReasoningEffort("anthropic/claude-fable-5")).toBe("high");
@@ -462,7 +462,7 @@ describe("model utilities", () => {
     });
     expect(getReasoningConfig("anthropic/claude-sonnet-5-5")).toEqual({
       efforts: ["low", "medium", "high", "xhigh", "max"],
-      default: "high",
+      default: "medium",
     });
     expect(getReasoningConfig("anthropic/claude-opus-4-8")).toEqual({
       efforts: ["low", "medium", "high", "xhigh", "max"],
