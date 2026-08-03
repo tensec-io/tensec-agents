@@ -90,7 +90,7 @@ vi.mock("@/hooks/use-enabled-models", () => ({
     enabledModelOptions: [
       {
         category: "Anthropic",
-        models: [{ id: DEFAULT_MODEL, name: "Claude Sonnet 4.6", description: "" }],
+        models: [{ id: DEFAULT_MODEL, name: "Claude Sonnet 5.5", description: "" }],
       },
     ],
     loading: false,
@@ -295,7 +295,7 @@ describe("NewAutomationPage template pre-fill", () => {
 
     expect(screen.getByDisplayValue("Scan codebase for vulnerabilities")).toBeInTheDocument();
     // Falls back to the enabled default model rather than the unenabled suggestion.
-    expect(screen.getByText("claude sonnet 4.6")).toBeInTheDocument();
+    expect(screen.getByText("claude sonnet 5.5")).toBeInTheDocument();
     expect(screen.queryByText("claude opus 4.8")).not.toBeInTheDocument();
   });
 });
