@@ -63,6 +63,7 @@ export default tseslint.config(
       "**/.source/**",
       "**/build/**",
       "**/.wrangler/**",
+      "**/.open-next/**",
       "**/coverage/**",
       "**/.venv/**",
       "**/venv/**",

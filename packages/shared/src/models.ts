@@ -64,7 +64,6 @@ export const MODEL_CATALOG = [
         id: "anthropic/claude-sonnet-4-6",
         name: "Claude Sonnet 4.6",
         description: "Balanced, fast coding",
-        default: true,
         reasoning: { efforts: ["low", "medium", "high", "max"], default: "high" },
       },
       {
@@ -80,9 +79,10 @@ export const MODEL_CATALOG = [
         id: "anthropic/claude-sonnet-5-5",
         name: "Claude Sonnet 5.5",
         description: "Latest Sonnet, fast and intelligent",
+        default: true,
         reasoning: {
           efforts: ["low", "medium", "high", "xhigh", "max"],
-          default: "high",
+          default: "medium",
         },
       },
       {
