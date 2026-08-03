@@ -14,6 +14,7 @@ export default tseslint.config(
       "**/.next/**",
       "**/build/**",
       "**/.wrangler/**",
+      "**/.open-next/**",
       "**/coverage/**",
       "**/.venv/**",
       "**/venv/**",

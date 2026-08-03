@@ -3,7 +3,7 @@ Base image definition for Open-Inspect sandboxes.
 
 This image provides a complete development environment with:
 - Debian slim base with git, curl, build-essential
-- Node.js 22 LTS, pnpm, Bun runtime
+- Node.js 24 LTS, pnpm, Bun runtime
 - Python 3.12 with uv
 - OpenCode CLI pre-installed
 - agent-browser CLI with headless Chrome for browser automation
@@ -105,10 +105,10 @@ base_image = (
         " > /etc/apt/sources.list.d/github-cli.list",
         "apt-get update && apt-get install -y gh && rm -rf /var/lib/apt/lists/*",
     )
-    # Install Node.js 22 LTS
+    # Install Node.js 24 LTS
     .run_commands(
-        # Add NodeSource repository for Node.js 22
-        "curl -fsSL https://deb.nodesource.com/setup_22.x | bash -",
+        # Add NodeSource repository for Node.js 24
+        "curl -fsSL https://deb.nodesource.com/setup_24.x | bash -",
         "apt-get install -y nodejs",
         # Verify installation
         "node --version",

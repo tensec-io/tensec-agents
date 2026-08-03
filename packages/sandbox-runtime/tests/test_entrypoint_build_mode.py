@@ -172,8 +172,8 @@ class TestImageBuildMode:
         assert observed_baselines == ["a" * 40]
 
     @pytest.mark.asyncio
-    async def test_clone_depth_100(self, build_env, tmp_path):
-        """Build mode should clone with --depth 100, not --depth 1."""
+    async def test_clone_is_not_shallow(self, build_env, tmp_path):
+        """Build mode should clone the full history, with no --depth truncation."""
         supervisor = _make_supervisor(build_env)
         # Point repo_path to a non-existent dir so clone branch is taken
         supervisor.repository_boot.repo_path = tmp_path / "nonexistent"
@@ -205,8 +205,9 @@ class TestImageBuildMode:
         clone_calls = [args for args in all_calls if "clone" in args]
         assert len(clone_calls) >= 1, f"Expected a git clone call, got: {all_calls}"
         clone_args = clone_calls[0]
-        assert "100" in clone_args, f"Expected --depth 100 in clone args, got {clone_args}"
-        assert "1" not in clone_args, "Build mode should not use --depth 1"
+        assert "--depth" not in clone_args, (
+            f"Clone must fetch full history, got shallow clone args: {clone_args}"
+        )
 
     @pytest.mark.asyncio
     async def test_clone_cancellation_kills_the_owned_process_group(self, build_env, tmp_path):
@@ -868,8 +869,8 @@ class TestNormalMode:
         supervisor.repository_boot.hooks.run_start.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_clone_depth_100_in_normal_mode(self, base_env, tmp_path):
-        """Normal mode should clone with --depth 100."""
+    async def test_clone_is_not_shallow_in_normal_mode(self, base_env, tmp_path):
+        """Normal mode should clone the full history, with no --depth truncation."""
         supervisor = _make_supervisor(base_env)
         supervisor.repository_boot.repo_path = tmp_path / "nonexistent"
         _repoint_primary(supervisor.repository_boot)
@@ -904,7 +905,9 @@ class TestNormalMode:
         clone_calls = [args for args in all_calls if "clone" in args]
         assert len(clone_calls) >= 1, f"Expected a git clone call, got: {all_calls}"
         clone_args = clone_calls[0]
-        assert "100" in clone_args, f"Expected --depth 100 in clone args, got {clone_args}"
+        assert "--depth" not in clone_args, (
+            f"Clone must fetch full history, got shallow clone args: {clone_args}"
+        )
 
 
 class TestSnapshotRestoreMode:
