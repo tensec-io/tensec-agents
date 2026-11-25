@@ -149,6 +149,7 @@ export default defineConfig({
     "**/.source/**",
     "**/build/**",
     "**/.wrangler/**",
+    "**/.open-next/**",
     "**/coverage/**",
     "**/.venv/**",
     "**/venv/**",
